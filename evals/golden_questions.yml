@@ -1,0 +1,527 @@
+# Golden set for the agent interface.
+#
+# Each entry has
+#   question        what a person would ask
+#   expected_call   the query_metric arguments a correct agent should end up with
+#   reference_sql   SQL written directly against the marts, independent of the
+#                   semantic layer (it uses action_taken_code, not the is_* flags
+#                   or MetricFlow). Its columns are named like the tool output.
+#   answer          how the LLM eval scores the final answer:
+#                     scalar  one number
+#                     label   the value of `label_column` in the top row
+#                     table   several rows; scored on tool result only
+#   compare         rows (default)  match rows by their dimension values
+#                   metric_values   compare only the sorted metric values, for
+#                                   ranked top-N questions where ties may order differently
+#
+# Expected numbers are not stored here. They are computed from reference_sql
+# against whatever warehouse is being tested (demo data or the CI fixture), so
+# the same file is valid for both. Questions only use DE, RI, 2023 and 2024,
+# which exist in both scopes. evals/golden_answers.demo.json is a snapshot of
+# the answers on the demo scope from the build described in the README.
+
+questions:
+  - id: q01
+    question: What was the mortgage approval rate in Delaware in 2024?
+    expected_call:
+      metric: approval_rate
+      filters:
+        - {dimension: state_code, op: "=", value: DE}
+        - {dimension: activity_year, op: "=", value: 2024}
+    reference_sql: |
+      select
+        count(*) filter (where action_taken_code in (1, 2)) * 1.0
+          / nullif(count(*) filter (where action_taken_code in (1, 2, 3)), 0) as approval_rate
+      from marts.fct_loan_applications
+      where state_code = 'DE' and activity_year = 2024
+    answer: {type: scalar}
+
+  - id: q02
+    question: What was the denial rate in Rhode Island in 2023?
+    expected_call:
+      metric: denial_rate
+      filters:
+        - {dimension: state_code, op: "=", value: RI}
+        - {dimension: activity_year, op: "=", value: 2023}
+    reference_sql: |
+      select
+        count(*) filter (where action_taken_code = 3) * 1.0
+          / nullif(count(*) filter (where action_taken_code in (1, 2, 3)), 0) as denial_rate
+      from marts.fct_loan_applications
+      where state_code = 'RI' and activity_year = 2023
+    answer: {type: scalar}
+
+  - id: q03
+    question: How many mortgage applications were there in Delaware in 2024, not counting purchased loans?
+    expected_call:
+      metric: application_count
+      filters:
+        - {dimension: state_code, op: "=", value: DE}
+        - {dimension: activity_year, op: "=", value: 2024}
+    reference_sql: |
+      select count(*) filter (where action_taken_code <> 6) as application_count
+      from marts.fct_loan_applications
+      where state_code = 'DE' and activity_year = 2024
+    answer: {type: scalar}
+
+  - id: q04
+    question: How many loans were originated in Rhode Island in 2024?
+    expected_call:
+      metric: origination_count
+      filters:
+        - {dimension: state_code, op: "=", value: RI}
+        - {dimension: activity_year, op: "=", value: 2024}
+    reference_sql: |
+      select count(*) filter (where action_taken_code = 1) as origination_count
+      from marts.fct_loan_applications
+      where state_code = 'RI' and activity_year = 2024
+    answer: {type: scalar}
+
+  - id: q05
+    question: Show the approval rate by state for each year.
+    expected_call:
+      metric: approval_rate
+      dimensions: [state_code]
+      grain: year
+    reference_sql: |
+      select
+        activity_year,
+        state_code,
+        count(*) filter (where action_taken_code in (1, 2)) * 1.0
+          / nullif(count(*) filter (where action_taken_code in (1, 2, 3)), 0) as approval_rate
+      from marts.fct_loan_applications
+      group by 1, 2
+    answer: {type: table}
+
+  - id: q06
+    question: What was the median originated loan amount in Delaware in 2023?
+    expected_call:
+      metric: median_loan_amount
+      filters:
+        - {dimension: state_code, op: "=", value: DE}
+        - {dimension: activity_year, op: "=", value: 2023}
+    reference_sql: |
+      select median(loan_amount) as median_loan_amount
+      from marts.fct_loan_applications
+      where state_code = 'DE' and activity_year = 2023 and action_taken_code = 1
+    answer: {type: scalar}
+
+  - id: q07
+    question: What was the average loan amount of originated loans in Rhode Island in 2024?
+    expected_call:
+      metric: avg_loan_amount
+      filters:
+        - {dimension: state_code, op: "=", value: RI}
+        - {dimension: activity_year, op: "=", value: 2024}
+    reference_sql: |
+      select avg(loan_amount) as avg_loan_amount
+      from marts.fct_loan_applications
+      where state_code = 'RI' and activity_year = 2024 and action_taken_code = 1
+    answer: {type: scalar}
+
+  - id: q08
+    question: What was the total dollar volume of loans originated in Delaware in 2024?
+    expected_call:
+      metric: originated_loan_volume
+      filters:
+        - {dimension: state_code, op: "=", value: DE}
+        - {dimension: activity_year, op: "=", value: 2024}
+    reference_sql: |
+      select sum(loan_amount) as originated_loan_volume
+      from marts.fct_loan_applications
+      where state_code = 'DE' and activity_year = 2024 and action_taken_code = 1
+    answer: {type: scalar}
+
+  - id: q09
+    question: What was the average rate spread on originated loans in Delaware in 2024?
+    expected_call:
+      metric: avg_rate_spread
+      filters:
+        - {dimension: state_code, op: "=", value: DE}
+        - {dimension: activity_year, op: "=", value: 2024}
+    reference_sql: |
+      select avg(rate_spread) as avg_rate_spread
+      from marts.fct_loan_applications
+      where state_code = 'DE' and activity_year = 2024 and action_taken_code = 1
+    answer: {type: scalar}
+
+  - id: q10
+    question: What was the median rate spread on originated FHA loans in 2024?
+    expected_call:
+      metric: median_rate_spread
+      filters:
+        - {dimension: loan_type, op: "=", value: FHA}
+        - {dimension: activity_year, op: "=", value: 2024}
+    reference_sql: |
+      select median(f.rate_spread) as median_rate_spread
+      from marts.fct_loan_applications as f
+      inner join marts.dim_loan_product as p on f.loan_product_key = p.loan_product_key
+      where p.loan_type_code = 2 and f.activity_year = 2024 and f.action_taken_code = 1
+    answer: {type: scalar}
+
+  - id: q11
+    question: What is the median loan-to-income ratio for applications in Rhode Island in 2024?
+    expected_call:
+      metric: median_loan_to_income
+      filters:
+        - {dimension: state_code, op: "=", value: RI}
+        - {dimension: activity_year, op: "=", value: 2024}
+    reference_sql: |
+      select median(loan_amount / (income_thousands * 1000)) as median_loan_to_income
+      from marts.fct_loan_applications
+      where
+        state_code = 'RI' and activity_year = 2024 and action_taken_code <> 6
+        and income_status = 'reported' and income_thousands > 0
+    answer: {type: scalar}
+
+  - id: q12
+    question: Break down denial reasons cited in Delaware in 2024.
+    expected_call:
+      metric: denial_reason_citations
+      dimensions: [denial_reason]
+      filters:
+        - {dimension: state_code, op: "=", value: DE}
+        - {dimension: activity_year, op: "=", value: 2024}
+    reference_sql: |
+      select r.denial_reason, count(*) as denial_reason_citations
+      from marts.fct_application_denial_reasons as r
+      where r.state_code = 'DE' and r.activity_year = 2024
+      group by 1
+    answer: {type: table}
+
+  - id: q13
+    question: What was the most commonly cited denial reason in Rhode Island in 2024?
+    expected_call:
+      metric: denial_reason_citations
+      dimensions: [denial_reason]
+      filters:
+        - {dimension: state_code, op: "=", value: RI}
+        - {dimension: activity_year, op: "=", value: 2024}
+      order_by: ["-denial_reason_citations"]
+      limit: 1
+    reference_sql: |
+      select denial_reason, count(*) as denial_reason_citations
+      from marts.fct_application_denial_reasons
+      where state_code = 'RI' and activity_year = 2024
+      group by 1
+      order by 2 desc, 1
+      limit 1
+    answer: {type: label, label_column: denial_reason}
+    compare: metric_values
+
+  - id: q14
+    question: How many applications were denied in Delaware in 2023?
+    expected_call:
+      metric: denial_count
+      filters:
+        - {dimension: state_code, op: "=", value: DE}
+        - {dimension: activity_year, op: "=", value: 2023}
+    reference_sql: |
+      select count(*) filter (where action_taken_code = 3) as denial_count
+      from marts.fct_loan_applications
+      where state_code = 'DE' and activity_year = 2023
+    answer: {type: scalar}
+
+  - id: q15
+    question: What share of applications ended in an originated loan in Delaware in 2024?
+    expected_call:
+      metric: origination_rate
+      filters:
+        - {dimension: state_code, op: "=", value: DE}
+        - {dimension: activity_year, op: "=", value: 2024}
+    reference_sql: |
+      select
+        count(*) filter (where action_taken_code = 1) * 1.0
+          / nullif(count(*) filter (where action_taken_code <> 6), 0) as origination_rate
+      from marts.fct_loan_applications
+      where state_code = 'DE' and activity_year = 2024
+    answer: {type: scalar}
+
+  - id: q16
+    question: What was the approval rate for home purchase loans in Rhode Island in 2024?
+    expected_call:
+      metric: approval_rate
+      filters:
+        - {dimension: loan_purpose, op: "=", value: Home purchase}
+        - {dimension: state_code, op: "=", value: RI}
+        - {dimension: activity_year, op: "=", value: 2024}
+    reference_sql: |
+      select
+        count(*) filter (where f.action_taken_code in (1, 2)) * 1.0
+          / nullif(count(*) filter (where f.action_taken_code in (1, 2, 3)), 0) as approval_rate
+      from marts.fct_loan_applications as f
+      inner join marts.dim_loan_product as p on f.loan_product_key = p.loan_product_key
+      where p.loan_purpose_code = 1 and f.state_code = 'RI' and f.activity_year = 2024
+    answer: {type: scalar}
+
+  - id: q17
+    question: Compare denial rates by loan purpose in 2024.
+    expected_call:
+      metric: denial_rate
+      dimensions: [loan_purpose]
+      filters:
+        - {dimension: activity_year, op: "=", value: 2024}
+    reference_sql: |
+      select
+        p.loan_purpose,
+        count(*) filter (where f.action_taken_code = 3) * 1.0
+          / nullif(count(*) filter (where f.action_taken_code in (1, 2, 3)), 0) as denial_rate
+      from marts.fct_loan_applications as f
+      inner join marts.dim_loan_product as p on f.loan_product_key = p.loan_product_key
+      where f.activity_year = 2024
+      group by 1
+    answer: {type: table}
+
+  - id: q18
+    question: How many loans were originated by loan type in Delaware in 2024?
+    expected_call:
+      metric: origination_count
+      dimensions: [loan_type]
+      filters:
+        - {dimension: state_code, op: "=", value: DE}
+        - {dimension: activity_year, op: "=", value: 2024}
+    reference_sql: |
+      select p.loan_type, count(*) filter (where f.action_taken_code = 1) as origination_count
+      from marts.fct_loan_applications as f
+      inner join marts.dim_loan_product as p on f.loan_product_key = p.loan_product_key
+      where f.state_code = 'DE' and f.activity_year = 2024
+      group by 1
+    answer: {type: table}
+
+  - id: q19
+    question: What was the average note rate on originated VA loans in 2023?
+    expected_call:
+      metric: avg_interest_rate
+      filters:
+        - {dimension: loan_type, op: "=", value: VA}
+        - {dimension: activity_year, op: "=", value: 2023}
+    reference_sql: |
+      select avg(f.interest_rate) as avg_interest_rate
+      from marts.fct_loan_applications as f
+      inner join marts.dim_loan_product as p on f.loan_product_key = p.loan_product_key
+      where p.loan_type_code = 3 and f.activity_year = 2023 and f.action_taken_code = 1
+    answer: {type: scalar}
+
+  - id: q20
+    question: Which five lenders originated the most loans in 2024, and how many each?
+    expected_call:
+      metric: origination_count
+      dimensions: [lender_name]
+      filters:
+        - {dimension: activity_year, op: "=", value: 2024}
+      order_by: ["-origination_count"]
+      limit: 5
+    reference_sql: |
+      select l.lender_name, count(*) filter (where f.action_taken_code = 1) as origination_count
+      from marts.fct_loan_applications as f
+      inner join marts.dim_lender as l on f.lender_key = l.lender_key
+      where f.activity_year = 2024
+      group by 1
+      order by 2 desc, 1
+      limit 5
+    answer: {type: table}
+    compare: metric_values
+
+  - id: q21
+    question: Which county in Delaware had the most originations in 2024?
+    expected_call:
+      metric: origination_count
+      dimensions: [county_name]
+      filters:
+        - {dimension: state_code, op: "=", value: DE}
+        - {dimension: activity_year, op: "=", value: 2024}
+      order_by: ["-origination_count"]
+      limit: 1
+    reference_sql: |
+      select g.county_name, count(*) filter (where f.action_taken_code = 1) as origination_count
+      from marts.fct_loan_applications as f
+      inner join marts.dim_geography as g on f.geography_key = g.geography_key
+      where f.state_code = 'DE' and f.activity_year = 2024
+      group by 1
+      order by 2 desc, 1
+      limit 1
+    answer: {type: label, label_column: county_name}
+    compare: metric_values
+
+  - id: q22
+    question: What was the approval rate by county in Rhode Island in 2024?
+    expected_call:
+      metric: approval_rate
+      dimensions: [county_name]
+      filters:
+        - {dimension: state_code, op: "=", value: RI}
+        - {dimension: activity_year, op: "=", value: 2024}
+    reference_sql: |
+      select
+        g.county_name,
+        count(*) filter (where f.action_taken_code in (1, 2)) * 1.0
+          / nullif(count(*) filter (where f.action_taken_code in (1, 2, 3)), 0) as approval_rate
+      from marts.fct_loan_applications as f
+      inner join marts.dim_geography as g on f.geography_key = g.geography_key
+      where f.state_code = 'RI' and f.activity_year = 2024
+      group by 1
+    answer: {type: table}
+
+  - id: q23
+    question: How did the number of applications change from 2023 to 2024 in each state?
+    expected_call:
+      metric: application_count
+      dimensions: [state_code]
+      grain: year
+      filters:
+        - {dimension: activity_year, op: in, value: [2023, 2024]}
+    reference_sql: |
+      select activity_year, state_code, count(*) filter (where action_taken_code <> 6) as application_count
+      from marts.fct_loan_applications
+      where activity_year in (2023, 2024)
+      group by 1, 2
+    answer: {type: table}
+
+  - id: q24
+    question: How far above the Freddie Mac 30-year survey rate were conventional loans priced on average in 2024?
+    expected_call:
+      metric: avg_rate_over_pmms_30y
+      filters:
+        - {dimension: loan_type, op: "=", value: Conventional}
+        - {dimension: activity_year, op: "=", value: 2024}
+    reference_sql: |
+      select avg(f.interest_rate - d.pmms_30y_avg) as avg_rate_over_pmms_30y
+      from marts.fct_loan_applications as f
+      inner join marts.dim_loan_product as p on f.loan_product_key = p.loan_product_key
+      inner join marts.dim_date as d on f.date_key = d.date_key
+      where
+        p.loan_type_code = 1 and f.activity_year = 2024 and f.action_taken_code = 1
+        and f.interest_rate is not null and f.loan_term_months = 360
+        and p.lien_status_code = 1 and p.open_end_line_of_credit_code = 2 and p.reverse_mortgage_code = 2
+    answer: {type: scalar}
+
+  - id: q25
+    question: How many originated loans in 2024 had a rate spread of 1.5 percentage points or more, by band?
+    expected_call:
+      metric: origination_count
+      dimensions: [rate_spread_band]
+      filters:
+        - {dimension: rate_spread_band, op: in, value: ["1.5 to <3.0", "3.0 or more"]}
+        - {dimension: activity_year, op: "=", value: 2024}
+    reference_sql: |
+      select
+        case when rate_spread < 3.0 then '1.5 to <3.0' else '3.0 or more' end as rate_spread_band,
+        count(*) as origination_count
+      from marts.fct_loan_applications
+      where activity_year = 2024 and action_taken_code = 1 and rate_spread >= 1.5
+      group by 1
+    answer: {type: table}
+
+  - id: q26
+    question: What was the denial rate for applications with a debt-to-income ratio above 60% in 2024?
+    expected_call:
+      metric: denial_rate
+      filters:
+        - {dimension: debt_to_income_band, op: "=", value: ">60%"}
+        - {dimension: activity_year, op: "=", value: 2024}
+    reference_sql: |
+      select
+        count(*) filter (where action_taken_code = 3) * 1.0
+          / nullif(count(*) filter (where action_taken_code in (1, 2, 3)), 0) as denial_rate
+      from marts.fct_loan_applications
+      where debt_to_income_band = '>60%' and activity_year = 2024
+    answer: {type: scalar}
+
+  - id: q27
+    question: How many applications were withdrawn or closed as incomplete in Rhode Island in 2023?
+    expected_call:
+      metric: withdrawn_or_incomplete_count
+      filters:
+        - {dimension: state_code, op: "=", value: RI}
+        - {dimension: activity_year, op: "=", value: 2023}
+    reference_sql: |
+      select count(*) filter (where action_taken_code in (4, 5)) as withdrawn_or_incomplete_count
+      from marts.fct_loan_applications
+      where state_code = 'RI' and activity_year = 2023
+    answer: {type: scalar}
+
+  - id: q28
+    question: What was the approval rate for first-lien versus subordinate-lien applications in Delaware in 2024?
+    expected_call:
+      metric: approval_rate
+      dimensions: [lien_status]
+      filters:
+        - {dimension: state_code, op: "=", value: DE}
+        - {dimension: activity_year, op: "=", value: 2024}
+    reference_sql: |
+      select
+        p.lien_status,
+        count(*) filter (where f.action_taken_code in (1, 2)) * 1.0
+          / nullif(count(*) filter (where f.action_taken_code in (1, 2, 3)), 0) as approval_rate
+      from marts.fct_loan_applications as f
+      inner join marts.dim_loan_product as p on f.loan_product_key = p.loan_product_key
+      where f.state_code = 'DE' and f.activity_year = 2024
+      group by 1
+    answer: {type: table}
+
+  - id: q29
+    question: What is the median loan amount for originated loans on investment properties in 2024?
+    expected_call:
+      metric: median_loan_amount
+      filters:
+        - {dimension: occupancy_type, op: "=", value: Investment property}
+        - {dimension: activity_year, op: "=", value: 2024}
+    reference_sql: |
+      select median(f.loan_amount) as median_loan_amount
+      from marts.fct_loan_applications as f
+      inner join marts.dim_loan_product as p on f.loan_product_key = p.loan_product_key
+      where p.occupancy_type_code = 3 and f.activity_year = 2024 and f.action_taken_code = 1
+    answer: {type: scalar}
+
+  - id: q30
+    question: How many total LAR records were reported for Delaware and Rhode Island combined in 2023, including purchased loans?
+    expected_call:
+      metric: lar_record_count
+      filters:
+        - {dimension: state_code, op: in, value: [DE, RI]}
+        - {dimension: activity_year, op: "=", value: 2023}
+    reference_sql: |
+      select count(*) as lar_record_count
+      from marts.fct_loan_applications
+      where state_code in ('DE', 'RI') and activity_year = 2023
+    answer: {type: scalar}
+
+  - id: q31
+    question: Show the denial rate by applicant age band in Delaware in 2024.
+    expected_call:
+      metric: denial_rate
+      dimensions: [applicant_age_band]
+      filters:
+        - {dimension: state_code, op: "=", value: DE}
+        - {dimension: activity_year, op: "=", value: 2024}
+    # Demographic breakdown: cells with fewer than 10 records have the value withheld.
+    reference_sql: |
+      select
+        d.applicant_age_band,
+        case
+          when count(*) >= 10 then
+            count(*) filter (where f.action_taken_code = 3) * 1.0
+              / nullif(count(*) filter (where f.action_taken_code in (1, 2, 3)), 0)
+        end as denial_rate
+      from marts.fct_loan_applications as f
+      inner join marts.dim_applicant_demographics as d
+        on f.applicant_demographics_key = d.applicant_demographics_key
+      where f.state_code = 'DE' and f.activity_year = 2024
+      group by 1
+    answer: {type: table}
+
+  - id: q32
+    question: How many times was "Credit history" cited as a denial reason on home purchase applications in 2024?
+    expected_call:
+      metric: denial_reason_citations
+      filters:
+        - {dimension: denial_reason, op: "=", value: Credit history}
+        - {dimension: loan_purpose, op: "=", value: Home purchase}
+        - {dimension: activity_year, op: "=", value: 2024}
+    reference_sql: |
+      select count(*) as denial_reason_citations
+      from marts.fct_application_denial_reasons as r
+      inner join marts.fct_loan_applications as f on r.application_id = f.application_id
+      inner join marts.dim_loan_product as p on f.loan_product_key = p.loan_product_key
+      where r.denial_reason_code = 3 and p.loan_purpose_code = 1 and r.activity_year = 2024
+    answer: {type: scalar}

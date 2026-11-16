@@ -1,0 +1,1036 @@
+{
+  "total": 32,
+  "passed": 32,
+  "failed": 0,
+  "metrics_covered": [
+    "application_count",
+    "approval_rate",
+    "avg_interest_rate",
+    "avg_loan_amount",
+    "avg_rate_over_pmms_30y",
+    "avg_rate_spread",
+    "denial_count",
+    "denial_rate",
+    "denial_reason_citations",
+    "lar_record_count",
+    "median_loan_amount",
+    "median_loan_to_income",
+    "median_rate_spread",
+    "originated_loan_volume",
+    "origination_count",
+    "origination_rate",
+    "withdrawn_or_incomplete_count"
+  ],
+  "metrics_not_covered": [
+    "approval_count",
+    "decisioned_application_count"
+  ],
+  "results": [
+    {
+      "id": "q01",
+      "question": "What was the mortgage approval rate in Delaware in 2024?",
+      "metric": "approval_rate",
+      "passed": true,
+      "detail": "1 rows match",
+      "rows": [
+        {
+          "approval_rate": 0.7462827472268114
+        }
+      ],
+      "reference_rows": [
+        {
+          "approval_rate": 0.7462827472268114
+        }
+      ],
+      "unit": "ratio"
+    },
+    {
+      "id": "q02",
+      "question": "What was the denial rate in Rhode Island in 2023?",
+      "metric": "denial_rate",
+      "passed": true,
+      "detail": "1 rows match",
+      "rows": [
+        {
+          "denial_rate": 0.27478284381654106
+        }
+      ],
+      "reference_rows": [
+        {
+          "denial_rate": 0.27478284381654106
+        }
+      ],
+      "unit": "ratio"
+    },
+    {
+      "id": "q03",
+      "question": "How many mortgage applications were there in Delaware in 2024, not counting purchased loans?",
+      "metric": "application_count",
+      "passed": true,
+      "detail": "1 rows match",
+      "rows": [
+        {
+          "application_count": 42099
+        }
+      ],
+      "reference_rows": [
+        {
+          "application_count": 42099
+        }
+      ],
+      "unit": "count"
+    },
+    {
+      "id": "q04",
+      "question": "How many loans were originated in Rhode Island in 2024?",
+      "metric": "origination_count",
+      "passed": true,
+      "detail": "1 rows match",
+      "rows": [
+        {
+          "origination_count": 22713
+        }
+      ],
+      "reference_rows": [
+        {
+          "origination_count": 22713
+        }
+      ],
+      "unit": "count"
+    },
+    {
+      "id": "q05",
+      "question": "Show the approval rate by state for each year.",
+      "metric": "approval_rate",
+      "passed": true,
+      "detail": "9 rows match",
+      "rows": [
+        {
+          "activity_year": 2022,
+          "state_code": "DE",
+          "approval_rate": 0.7655417406749556
+        },
+        {
+          "activity_year": 2022,
+          "state_code": "RI",
+          "approval_rate": 0.7751059174077005
+        },
+        {
+          "activity_year": 2022,
+          "state_code": "WY",
+          "approval_rate": 0.8183288409703504
+        },
+        {
+          "activity_year": 2023,
+          "state_code": "DE",
+          "approval_rate": 0.7388253638253638
+        },
+        {
+          "activity_year": 2023,
+          "state_code": "RI",
+          "approval_rate": 0.7252171561834589
+        },
+        {
+          "activity_year": 2023,
+          "state_code": "WY",
+          "approval_rate": 0.7904694614539174
+        },
+        {
+          "activity_year": 2024,
+          "state_code": "DE",
+          "approval_rate": 0.7462827472268114
+        },
+        {
+          "activity_year": 2024,
+          "state_code": "RI",
+          "approval_rate": 0.7431853950267548
+        },
+        {
+          "activity_year": 2024,
+          "state_code": "WY",
+          "approval_rate": 0.7902383502945902
+        }
+      ],
+      "reference_rows": [
+        {
+          "activity_year": 2024,
+          "state_code": "RI",
+          "approval_rate": 0.7431853950267548
+        },
+        {
+          "activity_year": 2022,
+          "state_code": "RI",
+          "approval_rate": 0.7751059174077005
+        },
+        {
+          "activity_year": 2023,
+          "state_code": "RI",
+          "approval_rate": 0.7252171561834589
+        },
+        {
+          "activity_year": 2023,
+          "state_code": "DE",
+          "approval_rate": 0.7388253638253638
+        },
+        {
+          "activity_year": 2023,
+          "state_code": "WY",
+          "approval_rate": 0.7904694614539174
+        },
+        {
+          "activity_year": 2024,
+          "state_code": "DE",
+          "approval_rate": 0.7462827472268114
+        },
+        {
+          "activity_year": 2022,
+          "state_code": "WY",
+          "approval_rate": 0.8183288409703504
+        },
+        {
+          "activity_year": 2024,
+          "state_code": "WY",
+          "approval_rate": 0.7902383502945902
+        },
+        {
+          "activity_year": 2022,
+          "state_code": "DE",
+          "approval_rate": 0.7655417406749556
+        }
+      ],
+      "unit": "ratio"
+    },
+    {
+      "id": "q06",
+      "question": "What was the median originated loan amount in Delaware in 2023?",
+      "metric": "median_loan_amount",
+      "passed": true,
+      "detail": "1 rows match",
+      "rows": [
+        {
+          "median_loan_amount": 245000.0
+        }
+      ],
+      "reference_rows": [
+        {
+          "median_loan_amount": 245000.0
+        }
+      ],
+      "unit": "usd"
+    },
+    {
+      "id": "q07",
+      "question": "What was the average loan amount of originated loans in Rhode Island in 2024?",
+      "metric": "avg_loan_amount",
+      "passed": true,
+      "detail": "1 rows match",
+      "rows": [
+        {
+          "avg_loan_amount": 316507.94699071016
+        }
+      ],
+      "reference_rows": [
+        {
+          "avg_loan_amount": 316507.94699071016
+        }
+      ],
+      "unit": "usd"
+    },
+    {
+      "id": "q08",
+      "question": "What was the total dollar volume of loans originated in Delaware in 2024?",
+      "metric": "originated_loan_volume",
+      "passed": true,
+      "detail": "1 rows match",
+      "rows": [
+        {
+          "originated_loan_volume": 7019160000.0
+        }
+      ],
+      "reference_rows": [
+        {
+          "originated_loan_volume": 7019160000.0
+        }
+      ],
+      "unit": "usd"
+    },
+    {
+      "id": "q09",
+      "question": "What was the average rate spread on originated loans in Delaware in 2024?",
+      "metric": "avg_rate_spread",
+      "passed": true,
+      "detail": "1 rows match",
+      "rows": [
+        {
+          "avg_rate_spread": 0.6510039481163999
+        }
+      ],
+      "reference_rows": [
+        {
+          "avg_rate_spread": 0.6510039481163999
+        }
+      ],
+      "unit": "percentage_points"
+    },
+    {
+      "id": "q10",
+      "question": "What was the median rate spread on originated FHA loans in 2024?",
+      "metric": "median_rate_spread",
+      "passed": true,
+      "detail": "1 rows match",
+      "rows": [
+        {
+          "median_rate_spread": 0.421
+        }
+      ],
+      "reference_rows": [
+        {
+          "median_rate_spread": 0.421
+        }
+      ],
+      "unit": "percentage_points"
+    },
+    {
+      "id": "q11",
+      "question": "What is the median loan-to-income ratio for applications in Rhode Island in 2024?",
+      "metric": "median_loan_to_income",
+      "passed": true,
+      "detail": "1 rows match",
+      "rows": [
+        {
+          "median_loan_to_income": 1.8421052631578947
+        }
+      ],
+      "reference_rows": [
+        {
+          "median_loan_to_income": 1.8421052631578947
+        }
+      ],
+      "unit": "ratio"
+    },
+    {
+      "id": "q12",
+      "question": "Break down denial reasons cited in Delaware in 2024.",
+      "metric": "denial_reason_citations",
+      "passed": true,
+      "detail": "9 rows match",
+      "rows": [
+        {
+          "denial_reason": "Collateral",
+          "denial_reason_citations": 1388
+        },
+        {
+          "denial_reason": "Credit application incomplete",
+          "denial_reason_citations": 1157
+        },
+        {
+          "denial_reason": "Credit history",
+          "denial_reason_citations": 2908
+        },
+        {
+          "denial_reason": "Debt-to-income ratio",
+          "denial_reason_citations": 3097
+        },
+        {
+          "denial_reason": "Employment history",
+          "denial_reason_citations": 176
+        },
+        {
+          "denial_reason": "Insufficient cash (downpayment or closing costs)",
+          "denial_reason_citations": 328
+        },
+        {
+          "denial_reason": "Mortgage insurance denied",
+          "denial_reason_citations": 2
+        },
+        {
+          "denial_reason": "Other",
+          "denial_reason_citations": 1275
+        },
+        {
+          "denial_reason": "Unverifiable information",
+          "denial_reason_citations": 503
+        }
+      ],
+      "reference_rows": [
+        {
+          "denial_reason": "Credit history",
+          "denial_reason_citations": 2908
+        },
+        {
+          "denial_reason": "Unverifiable information",
+          "denial_reason_citations": 503
+        },
+        {
+          "denial_reason": "Mortgage insurance denied",
+          "denial_reason_citations": 2
+        },
+        {
+          "denial_reason": "Collateral",
+          "denial_reason_citations": 1388
+        },
+        {
+          "denial_reason": "Debt-to-income ratio",
+          "denial_reason_citations": 3097
+        },
+        {
+          "denial_reason": "Other",
+          "denial_reason_citations": 1275
+        },
+        {
+          "denial_reason": "Employment history",
+          "denial_reason_citations": 176
+        },
+        {
+          "denial_reason": "Credit application incomplete",
+          "denial_reason_citations": 1157
+        },
+        {
+          "denial_reason": "Insufficient cash (downpayment or closing costs)",
+          "denial_reason_citations": 328
+        }
+      ],
+      "unit": "count"
+    },
+    {
+      "id": "q13",
+      "question": "What was the most commonly cited denial reason in Rhode Island in 2024?",
+      "metric": "denial_reason_citations",
+      "passed": true,
+      "detail": "1 metric values match",
+      "rows": [
+        {
+          "denial_reason": "Debt-to-income ratio",
+          "denial_reason_citations": 3448
+        }
+      ],
+      "reference_rows": [
+        {
+          "denial_reason": "Debt-to-income ratio",
+          "denial_reason_citations": 3448
+        }
+      ],
+      "unit": "count"
+    },
+    {
+      "id": "q14",
+      "question": "How many applications were denied in Delaware in 2023?",
+      "metric": "denial_count",
+      "passed": true,
+      "detail": "1 rows match",
+      "rows": [
+        {
+          "denial_count": 8040
+        }
+      ],
+      "reference_rows": [
+        {
+          "denial_count": 8040
+        }
+      ],
+      "unit": "count"
+    },
+    {
+      "id": "q15",
+      "question": "What share of applications ended in an originated loan in Delaware in 2024?",
+      "metric": "origination_rate",
+      "passed": true,
+      "detail": "1 rows match",
+      "rows": [
+        {
+          "origination_rate": 0.5773533813154706
+        }
+      ],
+      "reference_rows": [
+        {
+          "origination_rate": 0.5773533813154706
+        }
+      ],
+      "unit": "ratio"
+    },
+    {
+      "id": "q16",
+      "question": "What was the approval rate for home purchase loans in Rhode Island in 2024?",
+      "metric": "approval_rate",
+      "passed": true,
+      "detail": "1 rows match",
+      "rows": [
+        {
+          "approval_rate": 0.9060465912983898
+        }
+      ],
+      "reference_rows": [
+        {
+          "approval_rate": 0.9060465912983898
+        }
+      ],
+      "unit": "ratio"
+    },
+    {
+      "id": "q17",
+      "question": "Compare denial rates by loan purpose in 2024.",
+      "metric": "denial_rate",
+      "passed": true,
+      "detail": "6 rows match",
+      "rows": [
+        {
+          "loan_purpose": "Cash-out refinancing",
+          "denial_rate": 0.33626539331490324
+        },
+        {
+          "loan_purpose": "Home improvement",
+          "denial_rate": 0.3800034506556246
+        },
+        {
+          "loan_purpose": "Home purchase",
+          "denial_rate": 0.12113373386737873
+        },
+        {
+          "loan_purpose": "Not applicable",
+          "denial_rate": 0.25
+        },
+        {
+          "loan_purpose": "Other purpose",
+          "denial_rate": 0.42837641062977794
+        },
+        {
+          "loan_purpose": "Refinancing",
+          "denial_rate": 0.23791637837303548
+        }
+      ],
+      "reference_rows": [
+        {
+          "loan_purpose": "Not applicable",
+          "denial_rate": 0.25
+        },
+        {
+          "loan_purpose": "Refinancing",
+          "denial_rate": 0.23791637837303548
+        },
+        {
+          "loan_purpose": "Home improvement",
+          "denial_rate": 0.3800034506556246
+        },
+        {
+          "loan_purpose": "Home purchase",
+          "denial_rate": 0.12113373386737873
+        },
+        {
+          "loan_purpose": "Cash-out refinancing",
+          "denial_rate": 0.33626539331490324
+        },
+        {
+          "loan_purpose": "Other purpose",
+          "denial_rate": 0.42837641062977794
+        }
+      ],
+      "unit": "ratio"
+    },
+    {
+      "id": "q18",
+      "question": "How many loans were originated by loan type in Delaware in 2024?",
+      "metric": "origination_count",
+      "passed": true,
+      "detail": "4 rows match",
+      "rows": [
+        {
+          "loan_type": "Conventional",
+          "origination_count": 18794
+        },
+        {
+          "loan_type": "FHA",
+          "origination_count": 3591
+        },
+        {
+          "loan_type": "USDA RHS or FSA",
+          "origination_count": 55
+        },
+        {
+          "loan_type": "VA",
+          "origination_count": 1866
+        }
+      ],
+      "reference_rows": [
+        {
+          "loan_type": "FHA",
+          "origination_count": 3591
+        },
+        {
+          "loan_type": "VA",
+          "origination_count": 1866
+        },
+        {
+          "loan_type": "Conventional",
+          "origination_count": 18794
+        },
+        {
+          "loan_type": "USDA RHS or FSA",
+          "origination_count": 55
+        }
+      ],
+      "unit": "count"
+    },
+    {
+      "id": "q19",
+      "question": "What was the average note rate on originated VA loans in 2023?",
+      "metric": "avg_interest_rate",
+      "passed": true,
+      "detail": "1 rows match",
+      "rows": [
+        {
+          "avg_interest_rate": 6.288205538872197
+        }
+      ],
+      "reference_rows": [
+        {
+          "avg_interest_rate": 6.288205538872198
+        }
+      ],
+      "unit": "percent"
+    },
+    {
+      "id": "q20",
+      "question": "Which five lenders originated the most loans in 2024, and how many each?",
+      "metric": "origination_count",
+      "passed": true,
+      "detail": "5 metric values match",
+      "rows": [
+        {
+          "lender_name": "Citizens Bank, National Association",
+          "origination_count": 3525
+        },
+        {
+          "lender_name": "Rocket Mortgage, LLC",
+          "origination_count": 3312
+        },
+        {
+          "lender_name": "NAVIGANT CREDIT UNION",
+          "origination_count": 1907
+        },
+        {
+          "lender_name": "UNITED SHORE FINANCIAL SERVICES, LLC",
+          "origination_count": 1780
+        },
+        {
+          "lender_name": "GUILD MORTGAGE COMPANY",
+          "origination_count": 1568
+        }
+      ],
+      "reference_rows": [
+        {
+          "lender_name": "Citizens Bank, National Association",
+          "origination_count": 3525
+        },
+        {
+          "lender_name": "Rocket Mortgage, LLC",
+          "origination_count": 3312
+        },
+        {
+          "lender_name": "NAVIGANT CREDIT UNION",
+          "origination_count": 1907
+        },
+        {
+          "lender_name": "UNITED SHORE FINANCIAL SERVICES, LLC",
+          "origination_count": 1780
+        },
+        {
+          "lender_name": "GUILD MORTGAGE COMPANY",
+          "origination_count": 1568
+        }
+      ],
+      "unit": "count"
+    },
+    {
+      "id": "q21",
+      "question": "Which county in Delaware had the most originations in 2024?",
+      "metric": "origination_count",
+      "passed": true,
+      "detail": "1 metric values match",
+      "rows": [
+        {
+          "county_name": "New Castle County",
+          "origination_count": 11218
+        }
+      ],
+      "reference_rows": [
+        {
+          "county_name": "New Castle County",
+          "origination_count": 11218
+        }
+      ],
+      "unit": "count"
+    },
+    {
+      "id": "q22",
+      "question": "What was the approval rate by county in Rhode Island in 2024?",
+      "metric": "approval_rate",
+      "passed": true,
+      "detail": "6 rows match",
+      "rows": [
+        {
+          "county_name": "Bristol County",
+          "approval_rate": 0.8101884159106769
+        },
+        {
+          "county_name": "County not reported",
+          "approval_rate": 0.7037037037037037
+        },
+        {
+          "county_name": "Kent County",
+          "approval_rate": 0.7675337504115903
+        },
+        {
+          "county_name": "Newport County",
+          "approval_rate": 0.781516375056079
+        },
+        {
+          "county_name": "Providence County",
+          "approval_rate": 0.7142148213498015
+        },
+        {
+          "county_name": "Washington County",
+          "approval_rate": 0.7947450572320499
+        }
+      ],
+      "reference_rows": [
+        {
+          "county_name": "Washington County",
+          "approval_rate": 0.7947450572320499
+        },
+        {
+          "county_name": "Providence County",
+          "approval_rate": 0.7142148213498015
+        },
+        {
+          "county_name": "Bristol County",
+          "approval_rate": 0.8101884159106769
+        },
+        {
+          "county_name": "Kent County",
+          "approval_rate": 0.7675337504115903
+        },
+        {
+          "county_name": "County not reported",
+          "approval_rate": 0.7037037037037037
+        },
+        {
+          "county_name": "Newport County",
+          "approval_rate": 0.781516375056079
+        }
+      ],
+      "unit": "ratio"
+    },
+    {
+      "id": "q23",
+      "question": "How did the number of applications change from 2023 to 2024 in each state?",
+      "metric": "application_count",
+      "passed": true,
+      "detail": "6 rows match",
+      "rows": [
+        {
+          "activity_year": 2023,
+          "state_code": "DE",
+          "application_count": 38429
+        },
+        {
+          "activity_year": 2023,
+          "state_code": "RI",
+          "application_count": 35931
+        },
+        {
+          "activity_year": 2023,
+          "state_code": "WY",
+          "application_count": 16007
+        },
+        {
+          "activity_year": 2024,
+          "state_code": "DE",
+          "application_count": 42099
+        },
+        {
+          "activity_year": 2024,
+          "state_code": "RI",
+          "application_count": 38882
+        },
+        {
+          "activity_year": 2024,
+          "state_code": "WY",
+          "application_count": 18568
+        }
+      ],
+      "reference_rows": [
+        {
+          "activity_year": 2024,
+          "state_code": "RI",
+          "application_count": 38882
+        },
+        {
+          "activity_year": 2023,
+          "state_code": "DE",
+          "application_count": 38429
+        },
+        {
+          "activity_year": 2023,
+          "state_code": "WY",
+          "application_count": 16007
+        },
+        {
+          "activity_year": 2024,
+          "state_code": "DE",
+          "application_count": 42099
+        },
+        {
+          "activity_year": 2024,
+          "state_code": "WY",
+          "application_count": 18568
+        },
+        {
+          "activity_year": 2023,
+          "state_code": "RI",
+          "application_count": 35931
+        }
+      ],
+      "unit": "count"
+    },
+    {
+      "id": "q24",
+      "question": "How far above the Freddie Mac 30-year survey rate were conventional loans priced on average in 2024?",
+      "metric": "avg_rate_over_pmms_30y",
+      "passed": true,
+      "detail": "1 rows match",
+      "rows": [
+        {
+          "avg_rate_over_pmms_30y": 0.08515292044311917
+        }
+      ],
+      "reference_rows": [
+        {
+          "avg_rate_over_pmms_30y": 0.08515292044309934
+        }
+      ],
+      "unit": "percentage_points"
+    },
+    {
+      "id": "q25",
+      "question": "How many originated loans in 2024 had a rate spread of 1.5 percentage points or more, by band?",
+      "metric": "origination_count",
+      "passed": true,
+      "detail": "2 rows match",
+      "rows": [
+        {
+          "rate_spread_band": "1.5 to <3.0",
+          "origination_count": 4641
+        },
+        {
+          "rate_spread_band": "3.0 or more",
+          "origination_count": 3044
+        }
+      ],
+      "reference_rows": [
+        {
+          "rate_spread_band": "1.5 to <3.0",
+          "origination_count": 4641
+        },
+        {
+          "rate_spread_band": "3.0 or more",
+          "origination_count": 3044
+        }
+      ],
+      "unit": "count"
+    },
+    {
+      "id": "q26",
+      "question": "What was the denial rate for applications with a debt-to-income ratio above 60% in 2024?",
+      "metric": "denial_rate",
+      "passed": true,
+      "detail": "1 rows match",
+      "rows": [
+        {
+          "denial_rate": 0.8790393013100437
+        }
+      ],
+      "reference_rows": [
+        {
+          "denial_rate": 0.8790393013100437
+        }
+      ],
+      "unit": "ratio"
+    },
+    {
+      "id": "q27",
+      "question": "How many applications were withdrawn or closed as incomplete in Rhode Island in 2023?",
+      "metric": "withdrawn_or_incomplete_count",
+      "passed": true,
+      "detail": "1 rows match",
+      "rows": [
+        {
+          "withdrawn_or_incomplete_count": 6273
+        }
+      ],
+      "reference_rows": [
+        {
+          "withdrawn_or_incomplete_count": 6273
+        }
+      ],
+      "unit": "count"
+    },
+    {
+      "id": "q28",
+      "question": "What was the approval rate for first-lien versus subordinate-lien applications in Delaware in 2024?",
+      "metric": "approval_rate",
+      "passed": true,
+      "detail": "2 rows match",
+      "rows": [
+        {
+          "lien_status": "First lien",
+          "approval_rate": 0.8051042145273798
+        },
+        {
+          "lien_status": "Subordinate lien",
+          "approval_rate": 0.6048216976393772
+        }
+      ],
+      "reference_rows": [
+        {
+          "lien_status": "Subordinate lien",
+          "approval_rate": 0.6048216976393772
+        },
+        {
+          "lien_status": "First lien",
+          "approval_rate": 0.8051042145273798
+        }
+      ],
+      "unit": "ratio"
+    },
+    {
+      "id": "q29",
+      "question": "What is the median loan amount for originated loans on investment properties in 2024?",
+      "metric": "median_loan_amount",
+      "passed": true,
+      "detail": "1 rows match",
+      "rows": [
+        {
+          "median_loan_amount": 255000.0
+        }
+      ],
+      "reference_rows": [
+        {
+          "median_loan_amount": 255000.0
+        }
+      ],
+      "unit": "usd"
+    },
+    {
+      "id": "q30",
+      "question": "How many total LAR records were reported for Delaware and Rhode Island combined in 2023, including purchased loans?",
+      "metric": "lar_record_count",
+      "passed": true,
+      "detail": "1 rows match",
+      "rows": [
+        {
+          "lar_record_count": 82601
+        }
+      ],
+      "reference_rows": [
+        {
+          "lar_record_count": 82601
+        }
+      ],
+      "unit": "count"
+    },
+    {
+      "id": "q31",
+      "question": "Show the denial rate by applicant age band in Delaware in 2024.",
+      "metric": "denial_rate",
+      "passed": true,
+      "detail": "8 rows match",
+      "rows": [
+        {
+          "applicant_age_band": "25-34",
+          "denial_rate": 0.20884235020360675
+        },
+        {
+          "applicant_age_band": "35-44",
+          "denial_rate": 0.2556444698485282
+        },
+        {
+          "applicant_age_band": "45-54",
+          "denial_rate": 0.2784184514003295
+        },
+        {
+          "applicant_age_band": "55-64",
+          "denial_rate": 0.27017543859649124
+        },
+        {
+          "applicant_age_band": "65-74",
+          "denial_rate": 0.24989420228523063
+        },
+        {
+          "applicant_age_band": "<25",
+          "denial_rate": 0.19065656565656566
+        },
+        {
+          "applicant_age_band": ">74",
+          "denial_rate": 0.2832667047401485
+        },
+        {
+          "applicant_age_band": "Not applicable",
+          "denial_rate": 0.18208955223880596
+        }
+      ],
+      "reference_rows": [
+        {
+          "applicant_age_band": ">74",
+          "denial_rate": 0.2832667047401485
+        },
+        {
+          "applicant_age_band": "65-74",
+          "denial_rate": 0.24989420228523063
+        },
+        {
+          "applicant_age_band": "25-34",
+          "denial_rate": 0.20884235020360675
+        },
+        {
+          "applicant_age_band": "45-54",
+          "denial_rate": 0.2784184514003295
+        },
+        {
+          "applicant_age_band": "<25",
+          "denial_rate": 0.19065656565656566
+        },
+        {
+          "applicant_age_band": "Not applicable",
+          "denial_rate": 0.18208955223880596
+        },
+        {
+          "applicant_age_band": "55-64",
+          "denial_rate": 0.27017543859649124
+        },
+        {
+          "applicant_age_band": "35-44",
+          "denial_rate": 0.2556444698485282
+        }
+      ],
+      "unit": "ratio"
+    },
+    {
+      "id": "q32",
+      "question": "How many times was \"Credit history\" cited as a denial reason on home purchase applications in 2024?",
+      "metric": "denial_reason_citations",
+      "passed": true,
+      "detail": "1 rows match",
+      "rows": [
+        {
+          "denial_reason_citations": 1216
+        }
+      ],
+      "reference_rows": [
+        {
+          "denial_reason_citations": 1216
+        }
+      ],
+      "unit": "count"
+    }
+  ]
+}
