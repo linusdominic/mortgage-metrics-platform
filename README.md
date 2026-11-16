@@ -444,13 +444,31 @@ session and scores three things per question: whether a `query_metric` call
 matched the expected metric, dimensions and filters; whether any call returned
 the reference rows; and whether the submitted answer is right.
 
-> **The LLM eval has not been run.** There was no `ANTHROPIC_API_KEY` in the
-> environment this was built in. The runner is tested with a scripted fake
-> model (correct agent, wrong metric, equivalent-but-different call, guardrail
-> rejection fed back, refusal, runaway loop) and once with the fake model over
-> the real MCP transport. There are no model scores to report, and none are
-> claimed. The request shape sent to the Anthropic API has not been exercised
-> against the live API.
+Run on 17 November 2026 with `claude-sonnet-5-5`, all 32 questions, through the
+real MCP stdio server (`make eval-llm`):
+
+| Measure | Score |
+| --- | --- |
+| Questions completed | 32 / 32 |
+| Tool selection (same metric, dimensions and filters as the golden call) | 31 / 32 (0.9688) |
+| Result (rows returned equal the reference rows) | 30 / 32 (0.9375) |
+| Answer (submitted value or label is right) | 22 / 22 graded scalar and label questions (1.0) |
+| Tokens in / out | 390,374 / 11,386 |
+
+The three marks lost, none of which produced a wrong answer:
+
+- **q10** (median rate spread on originated FHA loans, 2024): the model added an
+  `action_taken = Loan originated` filter that the golden call does not have.
+  Rows and answer matched.
+- **q13** (most cited denial reason, RI 2024) and **q21** (Delaware county with
+  the most originations, 2024): the model fetched the ranked breakdown and read
+  the top row itself, so the rows returned were not the reference rows. The
+  submitted label and value were right in both.
+
+This is one run of one model. It was not repeated, so there is no variance
+estimate, and 32 questions over three small states is a small set. The full
+per-question output, including every tool call, is in
+[docs/evals/llm_eval_claude-sonnet-5-5_2026-11-17.json](docs/evals/llm_eval_claude-sonnet-5-5_2026-11-17.json).
 
 To run it:
 
@@ -721,8 +739,9 @@ of six real files, with source URLs and hashes in `PROVENANCE.json`).
 | dags | Airflow DAG integrity tests |
 | dbt-slim-ci | pull requests only: builds the base branch, then `dbt build --select state:modified+ --defer --state <base>` into `ci_` schemas |
 
-**The workflow has not run on GitHub**; this repository had not been pushed
-when this was written. Each job's commands were run locally and pass: 101
+The lint, test, pipeline and dags jobs pass on GitHub on `main`. The
+dbt-slim-ci job has not run there, because no pull request has been opened.
+Each job's commands were also run locally and pass: 101
 pytest tests (93 plus the 8 DAG tests), ruff and sqlfluff clean, the pipeline
 job's sequence on the fixture scope, and `make slim-ci-demo`, which changes
 `dim_date` in a copy of the project and shows dbt building only that model and
@@ -786,8 +805,8 @@ size. What would change, in order of importance:
 
 Not verified, or known not to work:
 
-- **LLM eval not run.** No API key. No model scores exist. See [Evals](#evals).
-- **CI not run on GitHub.** Jobs verified locally only.
+- **LLM eval run once.** One model, one run, no repeat for variance. See [Evals](#evals).
+- **Slim CI job not exercised on GitHub.** It only runs on pull requests; the other CI jobs pass on `main`.
 - **Not tried in an MCP host application.** Verified with the SDK's client over stdio.
 - **Full scope not run.** Only DE, RI and WY for 2022 to 2024 (and 2025 inside
   Airflow). Whether every state's file passes the strict bronze types is unknown.
