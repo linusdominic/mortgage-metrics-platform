@@ -1,0 +1,104 @@
+{
+  "lar_partitions": [
+    {
+      "activity_year": 2022,
+      "state_code": "DE",
+      "lar_source_url": "https://files.ffiec.cfpb.gov/data-browser/datasets/2022/filtered-queries/three-year/47f56f46cca274f51a49ea25f744e344.csv",
+      "lar_source_sha256": "87d85599f609f8741349f77b5aae5c64dba7d6555e3319ec581e370838ff3c73",
+      "lar_source_rows": 62038,
+      "lar_fetched_at": "2026-11-16T19:33:28+00:00",
+      "sample_every_kth_row": 89,
+      "sample_rows": 698,
+      "filers_source_url": "https://ffiec.cfpb.gov/v2/data-browser-api/view/filers?states=DE&years=2022",
+      "filers_source_sha256": "7053ca959164400a700964e6d8da4ea48de8a7c4534fa6469f7d4611abd5a8b7",
+      "filers_kept": 154,
+      "filers_in_source": 610
+    },
+    {
+      "activity_year": 2022,
+      "state_code": "RI",
+      "lar_source_url": "https://files.ffiec.cfpb.gov/data-browser/datasets/2022/filtered-queries/three-year/f1421bee56e0c8cd40fb5cd74be91da6.csv",
+      "lar_source_sha256": "9b70262b84c6df7d65f15c2c6d7221b866a3361bfd030dad8ca8bcc0e13b25f0",
+      "lar_source_rows": 56604,
+      "lar_fetched_at": "2026-11-16T19:33:35+00:00",
+      "sample_every_kth_row": 81,
+      "sample_rows": 699,
+      "filers_source_url": "https://ffiec.cfpb.gov/v2/data-browser-api/view/filers?states=RI&years=2022",
+      "filers_source_sha256": "8e336ca46b33132bc3d3d2b9f3c6f76e3c96ed57995d66bb5277fc8dfc1e169b",
+      "filers_kept": 152,
+      "filers_in_source": 472
+    },
+    {
+      "activity_year": 2023,
+      "state_code": "DE",
+      "lar_source_url": "https://files.ffiec.cfpb.gov/data-browser/datasets/2023/filtered-queries/one-year/47f56f46cca274f51a49ea25f744e344.csv",
+      "lar_source_sha256": "72ac213f123461a80ba806da3aa3237668c5de604d437a358022c78034993d90",
+      "lar_source_rows": 44128,
+      "lar_fetched_at": "2026-11-16T19:33:47+00:00",
+      "sample_every_kth_row": 64,
+      "sample_rows": 690,
+      "filers_source_url": "https://ffiec.cfpb.gov/v2/data-browser-api/view/filers?states=DE&years=2023",
+      "filers_source_sha256": "b03138bed61646176fbe549a13a545e97b519861a7c6792c85dfb8d64b568a9f",
+      "filers_kept": 169,
+      "filers_in_source": 546
+    },
+    {
+      "activity_year": 2023,
+      "state_code": "RI",
+      "lar_source_url": "https://files.ffiec.cfpb.gov/data-browser/datasets/2023/filtered-queries/one-year/f1421bee56e0c8cd40fb5cd74be91da6.csv",
+      "lar_source_sha256": "cc0bd55b22cd8346fc3bb1ccb2cf173722e66b8e73f718479a2252cc53c5f0b0",
+      "lar_source_rows": 38473,
+      "lar_fetched_at": "2026-11-16T19:34:43+00:00",
+      "sample_every_kth_row": 55,
+      "sample_rows": 700,
+      "filers_source_url": "https://ffiec.cfpb.gov/v2/data-browser-api/view/filers?states=RI&years=2023",
+      "filers_source_sha256": "37260d4d17b3b96fc4fe10c5ef1644d92e43f95e610db196c3823deaa05c60e8",
+      "filers_kept": 146,
+      "filers_in_source": 438
+    },
+    {
+      "activity_year": 2024,
+      "state_code": "DE",
+      "lar_source_url": "https://files.ffiec.cfpb.gov/data-browser/datasets/2024/filtered-queries/one-year/47f56f46cca274f51a49ea25f744e344.csv",
+      "lar_source_sha256": "305649ebe25db31755fe93f259930de9e016c7ee7f24a3386d4e6ea3bc8c2e30",
+      "lar_source_rows": 48786,
+      "lar_fetched_at": "2026-11-16T19:34:59+00:00",
+      "sample_every_kth_row": 70,
+      "sample_rows": 697,
+      "filers_source_url": "https://ffiec.cfpb.gov/v2/data-browser-api/view/filers?states=DE&years=2024",
+      "filers_source_sha256": "de608231f0f49c2a2bbd9ddb002e02bff4ee09c3ad03024420b9856e7207f837",
+      "filers_kept": 163,
+      "filers_in_source": 537
+    },
+    {
+      "activity_year": 2024,
+      "state_code": "RI",
+      "lar_source_url": "https://files.ffiec.cfpb.gov/data-browser/datasets/2024/filtered-queries/one-year/f1421bee56e0c8cd40fb5cd74be91da6.csv",
+      "lar_source_sha256": "c12e37f8820c9f4e594e484614176cc8853f2a69507df9f2d8b4057e1618f9d8",
+      "lar_source_rows": 41977,
+      "lar_fetched_at": "2026-11-16T19:35:09+00:00",
+      "sample_every_kth_row": 60,
+      "sample_rows": 700,
+      "filers_source_url": "https://ffiec.cfpb.gov/v2/data-browser-api/view/filers?states=RI&years=2024",
+      "filers_source_sha256": "7e270dbd30f9196bdb6792a817030833e34b0ccb50ceea7bd18aed76ab57a8fa",
+      "filers_kept": 141,
+      "filers_in_source": 433
+    }
+  ],
+  "reference_files": [
+    {
+      "dataset": "pmms",
+      "source_url": "https://www.freddiemac.com/pmms/docs/PMMS_history.csv",
+      "sha256": "7d79f2432fdd640a49bfc8708cba30394a85f436122b91e3f038f9ee9785bdb8",
+      "row_count": 2903,
+      "fetched_at": "2026-11-16T19:35:26+00:00"
+    },
+    {
+      "dataset": "census_counties",
+      "source_url": "https://www2.census.gov/geo/docs/reference/codes2020/national_county2020.txt",
+      "sha256": "9f6e5f6eb6ac2f5e9a36d5fd01dec77991bddc75118f748a069441a4782970d6",
+      "row_count": 3235,
+      "fetched_at": "2026-11-16T19:35:28+00:00"
+    }
+  ]
+}
