@@ -1,0 +1,110 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  UV_FROZEN: "1"          # fail if uv.lock is out of date instead of re-resolving
+  DO_NOT_TRACK: "1"
+  MMP_SCOPE: fixture      # offline: tests/fixtures/source, no calls to the HMDA API from CI
+  MMP_DATA_DIR: ${{ github.workspace }}/.ci-data
+  MMP_DBT_TARGET_PATH: ${{ github.workspace }}/.ci-data/dbt_target
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+      - run: uv sync
+      - name: ruff
+        run: |
+          uv run ruff check .
+          uv run ruff format --check .
+      - name: sqlfluff (dbt templater compiles the project, so land the fixture first)
+        run: |
+          uv run mmp ingest
+          uv run sqlfluff lint dbt/models dbt/tests dbt/snapshots
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+      - run: uv sync
+      - name: pytest (ingestion, dbt build on the fixture, semantic layer, MCP over stdio, evals with a fake model)
+        run: uv run pytest
+
+  pipeline:
+    name: pipeline + dbt build + deterministic evals (fixture)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+      - run: uv sync
+      - name: full pipeline on the committed fixture sample
+        run: uv run mmp pipeline
+      - name: second run must be a no-op for the incremental models
+        run: uv run mmp pipeline --no-report
+      - name: backfill twice, checksums must match
+        run: ./scripts/backfill_proof.sh
+      - name: deterministic evals
+        run: uv run mmp eval
+      - name: MCP smoke test
+        run: uv run python scripts/mcp_smoke_test.py
+      - name: cost report
+        run: uv run mmp cost-report
+      - uses: actions/upload-artifact@v5
+        if: always()
+        with:
+          name: report-and-published-metrics
+          path: .ci-data/published
+          retention-days: 7
+
+  dags:
+    name: airflow DAG integrity
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+      - run: uv sync --group airflow
+      - run: uv run --group airflow pytest tests/dags -m airflow
+
+  dbt-slim-ci:
+    name: dbt slim CI (state:modified+ with deferral)
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+      - name: build the base branch; this is the state the PR defers to
+        run: |
+          git worktree add "$RUNNER_TEMP/base" "origin/${{ github.base_ref }}"
+          cd "$RUNNER_TEMP/base"
+          uv sync
+          MMP_REPO_ROOT="$PWD" uv run mmp ingest
+          MMP_REPO_ROOT="$PWD" uv run mmp dbt-build
+      - run: uv sync
+      - name: build only modified models and their children, deferring the rest to the base build
+        run: ./scripts/slim_ci.sh "$MMP_DATA_DIR/dbt_state"
