@@ -1,0 +1,28 @@
+# data: raw downloads, Parquet, the DuckDB warehouse, telemetry, logs
+/data/
+/.ci-data/
+*.duckdb
+*.duckdb.wal
+
+# dbt
+dbt/target/
+dbt/logs/
+dbt/dbt_packages/
+dbt/.user.yml
+logs/
+
+# python
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# local config
+.env
+.DS_Store
+.idea/
+.vscode/

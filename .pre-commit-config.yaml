@@ -1,0 +1,38 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+        args: [--allow-multiple-documents]
+      - id: check-added-large-files
+        args: [--maxkb=600]
+      - id: check-merge-conflict
+
+  # Local hooks so the versions are the ones pinned in uv.lock.
+  - repo: local
+    hooks:
+      - id: ruff-check
+        name: ruff check
+        entry: uv run ruff check --fix
+        language: system
+        types: [python]
+      - id: ruff-format
+        name: ruff format
+        entry: uv run ruff format
+        language: system
+        types: [python]
+      - id: sqlfluff
+        name: sqlfluff lint (dbt templater)
+        entry: env MMP_DATA_DIR=data uv run sqlfluff lint
+        language: system
+        files: ^dbt/(models|tests|snapshots)/.*\.sql$
+        exclude: ^dbt/tests/generic/
+        require_serial: true
+      - id: uv-lock
+        name: uv.lock is up to date
+        entry: uv lock --check
+        language: system
+        files: ^(pyproject\.toml|uv\.lock)$
+        pass_filenames: false

@@ -1,0 +1,43 @@
+[sqlfluff]
+templater = dbt
+dialect = duckdb
+max_line_length = 120
+# ST06: column order in the marts follows the contract (keys, attributes, measures,
+#       lineage), not "simple columns first".
+# AM04: `select *` over a typed base view is intentional in the staging layer.
+# RF02: single-source queries with a lookup join read better without qualifying every column.
+# AL05: an alias is still worth having on a table that is only used in the join condition.
+exclude_rules = ST06, AM04, RF02, AL05
+large_file_skip_byte_limit = 0
+
+[sqlfluff:templater:dbt]
+project_dir = dbt
+profiles_dir = dbt
+
+[sqlfluff:indentation]
+indent_unit = space
+tab_space_size = 4
+indented_joins = false
+indented_using_on = true
+template_blocks_indent = true
+
+[sqlfluff:rules:capitalisation.keywords]
+capitalisation_policy = lower
+[sqlfluff:rules:capitalisation.identifiers]
+extended_capitalisation_policy = lower
+[sqlfluff:rules:capitalisation.functions]
+extended_capitalisation_policy = lower
+[sqlfluff:rules:capitalisation.literals]
+capitalisation_policy = lower
+[sqlfluff:rules:capitalisation.types]
+extended_capitalisation_policy = lower
+
+[sqlfluff:rules:aliasing.table]
+aliasing = explicit
+[sqlfluff:rules:aliasing.column]
+aliasing = explicit
+[sqlfluff:rules:ambiguous.column_references]
+group_by_and_order_by_style = implicit
+[sqlfluff:rules:references.keywords]
+# `year`, `state`, `value`, `domain`, `label`, `field`, `code` are source or seed column names
+ignore_words = year, state, value, domain, label, field, code

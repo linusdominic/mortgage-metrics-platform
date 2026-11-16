@@ -1,0 +1,39 @@
+# Pipeline scopes. A scope is a set of (activity_year, state) partitions.
+# Select with `MMP_SCOPE=<name>` or `mmp --scope <name>`.
+default_scope: demo
+
+scopes:
+  # Default. Small enough to download and build in a couple of minutes.
+  demo:
+    years: [2023, 2024]
+    states: [DE, RI, WY]
+    # Loaded by `make backfill` and by the Airflow backfill demonstration.
+    backfill_years: [2022]
+
+  # Offline sample committed under tests/fixtures/source. Used by pytest and CI.
+  fixture:
+    years: [2023, 2024]
+    states: [DE, RI]
+    backfill_years: [2022]
+
+  # Every state plus DC and PR. Roughly 10-12M rows per year; expect several GB
+  # of raw CSV and a long, sequential download. Not run as part of this build.
+  full:
+    years: [2022, 2023, 2024]
+    states: [AL, AK, AZ, AR, CA, CO, CT, DE, DC, FL, GA, HI, ID, IL, IN, IA, KS,
+             KY, LA, ME, MD, MA, MI, MN, MS, MO, MT, NE, NV, NH, NJ, NM, NY, NC,
+             ND, OH, OK, OR, PA, PR, RI, SC, SD, TN, TX, UT, VT, VA, WA, WV, WI, WY]
+
+http:
+  # Leave unset to send the HTTP library's stock User-Agent (python-httpx/x.y).
+  # See docs/runbook.md "User-Agent" for why this is the default.
+  user_agent:
+  pause_seconds: 1.0     # sleep between requests to the same host
+  max_retries: 4
+
+quality:
+  # Year-over-year row-count change per state that triggers a warning / failure.
+  volume_warn_pct: 40
+  volume_fail_pct: 80
+  # Bronze data older than this (by ingestion time) fails the freshness check.
+  freshness_max_age_days: 30

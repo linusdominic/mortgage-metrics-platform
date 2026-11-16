@@ -1,0 +1,6 @@
+dbt/target/
+dbt/dbt_packages/
+dbt/macros/
+dbt/logs/
+data/
+.venv/
