@@ -1,0 +1,204 @@
+version: 2
+
+# Semantic models map the star schema to entities, dimensions and measures.
+# Measures are building blocks; the governed, named metrics are in _metrics.yml.
+#
+# Dimension names are unique across all semantic models on purpose: the serving
+# layer exposes them to agents by bare name (lender_name, loan_purpose, ...).
+
+semantic_models:
+  - name: loan_applications
+    description: HMDA LAR records at application grain (fct_loan_applications).
+    model: ref('fct_loan_applications')
+    defaults:
+      agg_time_dimension: activity_year_start
+    entities:
+      - name: application
+        type: primary
+        expr: application_id
+      - name: lender
+        type: foreign
+        expr: lender_key
+      - name: geography
+        type: foreign
+        expr: geography_key
+      - name: loan_product
+        type: foreign
+        expr: loan_product_key
+      - name: applicant_demographics
+        type: foreign
+        expr: applicant_demographics_key
+    dimensions:
+      - name: activity_year_start
+        description: January 1 of the activity year. Year is the finest grain the public LAR supports.
+        type: time
+        type_params:
+          time_granularity: year
+      - name: state_code
+        description: Two-letter property state.
+        type: categorical
+      - name: action_taken
+        description: Final action on the record, e.g. "Loan originated", "Application denied".
+        type: categorical
+      - name: primary_denial_reason
+        description: First stated denial reason; "Not denied or not stated" for everything else.
+        type: categorical
+      - name: debt_to_income_band
+        description: Debt-to-income ratio band.
+        type: categorical
+      - name: rate_spread_band
+        description: Rate spread bucket for originated loans, e.g. "0 to <0.5", "1.5 to <3.0", "Not reported".
+        type: categorical
+    measures:
+      - name: applications
+        description: Records that are applications or preapproval requests (everything except purchased loans).
+        agg: sum
+        expr: "case when is_application then 1 else 0 end"
+      - name: lar_records
+        description: All LAR records including purchased loans.
+        agg: count
+        expr: application_id
+      - name: originations
+        agg: sum
+        expr: "case when is_originated then 1 else 0 end"
+      - name: approvals
+        agg: sum
+        expr: "case when is_approved then 1 else 0 end"
+      - name: denials
+        agg: sum
+        expr: "case when is_denied then 1 else 0 end"
+      - name: decisioned_applications
+        agg: sum
+        expr: "case when is_decisioned then 1 else 0 end"
+      - name: withdrawn_or_incomplete
+        agg: sum
+        expr: "case when is_withdrawn_or_incomplete then 1 else 0 end"
+      - name: originated_amount
+        agg: sum
+        expr: "case when is_originated then loan_amount end"
+      - name: originated_amount_avg
+        agg: average
+        expr: "case when is_originated then loan_amount end"
+      - name: originated_amount_median
+        agg: median
+        expr: "case when is_originated then loan_amount end"
+      - name: originated_interest_rate_avg
+        agg: average
+        expr: "case when is_originated then interest_rate end"
+      - name: originated_rate_spread_avg
+        agg: average
+        expr: "case when is_originated then rate_spread end"
+      - name: originated_rate_spread_median
+        agg: median
+        expr: "case when is_originated then rate_spread end"
+      - name: loan_to_income_median
+        agg: median
+        expr: "case when is_application then loan_to_income_ratio end"
+      - name: rate_over_pmms_30y_avg
+        agg: average
+        expr: rate_over_pmms_30y
+
+  - name: denial_reasons
+    description: Stated denial reasons, one row per reason per denied application.
+    model: ref('fct_application_denial_reasons')
+    defaults:
+      agg_time_dimension: reason_year_start
+    entities:
+      - name: denial_reason_citation
+        type: primary
+        expr: denial_reason_id
+      - name: application
+        type: foreign
+        expr: application_id
+    dimensions:
+      - name: reason_year_start
+        type: time
+        expr: activity_year_start
+        type_params:
+          time_granularity: year
+      - name: denial_reason
+        description: Stated denial reason, e.g. "Debt-to-income ratio", "Credit history".
+        type: categorical
+    measures:
+      - name: denial_reason_citations
+        description: Number of times a reason was cited. A denial citing two reasons counts twice.
+        agg: count
+        expr: denial_reason_id
+
+  - name: lenders
+    description: Lender dimension (name version filed for the activity year).
+    model: ref('dim_lender')
+    entities:
+      - name: lender
+        type: primary
+        expr: lender_key
+    dimensions:
+      - name: lender_name
+        description: Institution name as filed for the activity year.
+        type: categorical
+      - name: lei
+        description: Legal Entity Identifier, stable across name changes.
+        type: categorical
+
+  - name: geographies
+    description: County-grain geography.
+    model: ref('dim_geography')
+    entities:
+      - name: geography
+        type: primary
+        expr: geography_key
+    dimensions:
+      - name: county_name
+        description: County name; "County not reported" when the record has no county.
+        type: categorical
+      - name: county_fips
+        description: Five-digit county FIPS code.
+        type: categorical
+
+  - name: loan_products
+    description: Loan attribute junk dimension.
+    model: ref('dim_loan_product')
+    entities:
+      - name: loan_product
+        type: primary
+        expr: loan_product_key
+    dimensions:
+      - name: loan_type
+        description: Conventional, FHA, VA, or USDA RHS or FSA.
+        type: categorical
+      - name: loan_purpose
+        description: Home purchase, Home improvement, Refinancing, Cash-out refinancing, Other purpose, Not applicable.
+        type: categorical
+      - name: lien_status
+        description: First lien or Subordinate lien.
+        type: categorical
+      - name: occupancy_type
+        description: Principal residence, Second residence or Investment property.
+        type: categorical
+      - name: construction_method
+        description: Site-built or Manufactured home.
+        type: categorical
+      - name: conforming_loan_limit
+        description: Conforming, Nonconforming, Undetermined or Not applicable.
+        type: categorical
+
+  - name: applicant_demographics
+    description: FFIEC-derived applicant attributes. Read the responsible-use note before slicing by these.
+    model: ref('dim_applicant_demographics')
+    entities:
+      - name: applicant_demographics
+        type: primary
+        expr: applicant_demographics_key
+    dimensions:
+      - name: derived_race
+        description: FFIEC-derived race of applicant and co-applicant combined.
+        type: categorical
+      - name: derived_ethnicity
+        description: FFIEC-derived ethnicity of applicant and co-applicant combined.
+        type: categorical
+      - name: derived_sex
+        description: FFIEC-derived sex of applicant and co-applicant combined.
+        type: categorical
+      - name: applicant_age_band
+        description: Applicant age band.
+        type: categorical

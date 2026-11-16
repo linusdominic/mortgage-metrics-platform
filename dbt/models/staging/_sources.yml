@@ -1,0 +1,113 @@
+version: 2
+
+sources:
+  - name: bronze
+    description: >
+      Typed Parquet written by `mmp convert` from the raw landed files. One file
+      per (activity_year, state) partition for LAR and filers. Read in place by
+      DuckDB; on a cloud warehouse these would be external tables or a COPY target.
+    meta:
+      owner: data-platform
+    config:
+      loaded_at_field: _ingested_at
+      freshness:
+        warn_after: {count: 30, period: day}
+        error_after: {count: 400, period: day}
+    tables:
+      - name: hmda_lar
+        description: >
+          HMDA Loan Application Register, public modified LAR as served by the FFIEC
+          data browser API, filtered by property state. One row per reported
+          application or covered loan. Sentinel-carrying columns are still strings here.
+        config:
+          external_location: "read_parquet('{{ env_var('MMP_DATA_DIR', '../data') }}/bronze/hmda_lar/*/*/*.parquet', hive_partitioning = true)"
+        columns:
+          - name: activity_year
+            description: Calendar year the action was taken in.
+          - name: lei
+            description: Legal Entity Identifier of the reporting institution.
+          - name: source_row_number
+            description: 1-based position of the row in the raw CSV. Added by the converter.
+          - name: _source_sha256
+            description: sha256 of the raw file the row came from. Added by the converter.
+          - name: year
+            description: Hive partition key (directory name), the requested activity year.
+          - name: state
+            description: Hive partition key (directory name), the requested state.
+
+      - name: hmda_filers
+        description: >
+          Institutions that reported at least one record for the state and year
+          (FFIEC data browser `filers` endpoint). Name as reported for that year.
+        config:
+          external_location: "read_parquet('{{ env_var('MMP_DATA_DIR', '../data') }}/bronze/hmda_filers/*/*/*.parquet', hive_partitioning = true)"
+        columns:
+          - name: lei
+            description: Legal Entity Identifier.
+          - name: institution_name
+            description: Institution name as reported for the activity year.
+          - name: lar_count
+            description: Number of LAR records for the institution in the requested state and year.
+          - name: activity_year
+            description: Activity year of the filing.
+
+      - name: pmms_weekly
+        description: >
+          Freddie Mac Primary Mortgage Market Survey weekly average rates, full history.
+        config:
+          external_location: "read_parquet('{{ env_var('MMP_DATA_DIR', '../data') }}/bronze/pmms/pmms_weekly.parquet')"
+        columns:
+          - name: week_date
+            description: Survey week date as published.
+          - name: rate_30y_fixed
+            description: Average 30-year fixed rate, percent.
+          - name: rate_15y_fixed
+            description: Average 15-year fixed rate, percent. Null before the series starts.
+
+      - name: census_counties
+        description: >
+          Census Bureau 2020 county reference file (state and county FIPS codes and names).
+        config:
+          external_location: "read_parquet('{{ env_var('MMP_DATA_DIR', '../data') }}/bronze/census_counties/counties.parquet')"
+        columns:
+          - name: county_fips
+            description: Five-digit state + county FIPS code.
+          - name: county_name
+            description: County or equivalent name.
+          - name: state_code
+            description: Two-letter state abbreviation.
+          - name: state_fips
+            description: Two-digit state FIPS code.
+
+  - name: ops
+    description: Operational metadata written by the ingestion code.
+    tables:
+      - name: ingest_manifest
+        description: >
+          One row per landed raw file: where it came from, its size, sha256 and row
+          count. Written by `mmp index-manifest` from the per-partition
+          _manifest.json files. The left-hand side of the raw-to-staging reconciliation and the
+          driver of incremental partition selection.
+        config:
+          external_location: "read_parquet('{{ env_var('MMP_DATA_DIR', '../data') }}/bronze/ingest_manifest/manifest.parquet')"
+          loaded_at_field: fetched_at
+          freshness:
+            warn_after: {count: 30, period: day}
+            error_after: {count: 400, period: day}
+        columns:
+          - name: dataset
+            description: hmda_lar, hmda_filers, pmms or census_counties.
+          - name: activity_year
+            description: Partition year; null for reference files.
+          - name: state_code
+            description: Partition state; null for reference files.
+          - name: source_url
+            description: Final URL the bytes were read from (after redirects).
+          - name: bytes
+            description: Size of the raw file.
+          - name: sha256
+            description: sha256 of the raw file.
+          - name: row_count
+            description: Data rows in the raw file, counted independently of the Parquet converter.
+          - name: fetched_at
+            description: UTC time the file was downloaded.

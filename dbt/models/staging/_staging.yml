@@ -1,0 +1,283 @@
+version: 2
+
+models:
+  - name: stg_hmda__lar_typed
+    description: >
+      Every bronze LAR row with sentinel-carrying fields parsed into a number plus a
+      status, and a reject_reason classifying rows that cannot be used. Carries the
+      analytical subset of the 99 LAR columns; bronze keeps all of them.
+    columns:
+      - name: application_id
+        description: >
+          md5 of (partition year, partition state, row position in the raw file). The
+          public LAR has no record identifier (the ULI is removed), so identity is
+          positional within one version of one file.
+        data_tests: [not_null]
+      - name: partition_year
+        description: Activity year requested from the API (Hive partition key).
+      - name: partition_state
+        description: State requested from the API (Hive partition key).
+      - name: source_row_number
+        description: 1-based position of the row in the raw CSV.
+      - name: _source_sha256
+        description: sha256 of the raw file the row came from.
+      - name: activity_year
+        description: Activity year as reported on the row.
+      - name: state_code
+        description: Two-letter property state as reported on the row.
+      - name: lei
+        description: Legal Entity Identifier of the reporting institution.
+      - name: county_fips
+        description: Five-digit county FIPS code; null when the source says NA.
+      - name: action_taken
+        description: HMDA action taken code, 1-8.
+      - name: loan_amount
+        description: Loan amount in dollars, published rounded to the midpoint of a $10,000 band.
+      - name: income_thousands
+        description: Gross annual income relied on, in thousands of dollars; null unless income_status is reported.
+      - name: income_status
+        description: reported, not_applicable, exempt, missing or unparseable.
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [reported, not_applicable, exempt, missing]
+      - name: interest_rate
+        description: Note rate in percent; null unless interest_rate_status is reported.
+      - name: interest_rate_status
+        description: reported, not_applicable, exempt, missing or unparseable.
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [reported, not_applicable, exempt, missing]
+      - name: rate_spread
+        description: Difference between the loan APR and the average prime offer rate, percentage points.
+      - name: rate_spread_status
+        description: reported, not_applicable, exempt, missing or unparseable.
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [reported, not_applicable, exempt, missing]
+      - name: debt_to_income_band
+        description: Debt-to-income ratio normalised to bands; whole percents 36-49 are folded into 36%-<50%.
+      - name: reject_reason
+        description: >
+          Null for usable rows. Otherwise the first failed rule: partition_mismatch,
+          invalid_lei, invalid_action_taken, invalid_loan_amount, unknown_product_code,
+          unknown_domain_value.
+        data_tests:
+          - accepted_values:
+              arguments:
+                values:
+                  - partition_mismatch
+                  - invalid_lei
+                  - invalid_action_taken
+                  - invalid_loan_amount
+                  - unknown_product_code
+                  - unknown_domain_value
+
+  - name: stg_hmda__loan_applications
+    description: Usable LAR rows (reject_reason is null). Same columns as stg_hmda__lar_typed.
+    columns:
+      - name: application_id
+        description: Positional surrogate identifier, see stg_hmda__lar_typed.
+        data_tests: [not_null]
+      - name: interest_rate
+        description: Note rate in percent.
+        data_tests:
+          - value_between:
+              arguments: {min_value: 0, max_value: 25}
+              config: {severity: warn}
+      - name: loan_to_value_ratio
+        description: Combined loan-to-value ratio in percent as reported. Known to contain reporting errors.
+        data_tests:
+          - value_between:
+              arguments: {min_value: 0, max_value: 1000}
+              config: {severity: warn}
+
+  - name: stg_hmda__filers
+    description: One row per (lei, activity_year) with the name the institution filed under that year.
+    columns:
+      - name: lei
+        description: Legal Entity Identifier.
+        data_tests: [not_null]
+      - name: activity_year
+        description: Filing year.
+        data_tests: [not_null]
+      - name: lender_name
+        description: Institution name as reported for the year.
+        data_tests: [not_null]
+      - name: lar_count_in_scope
+        description: LAR records for the institution across the states loaded for that year.
+    data_tests:
+      - unique_combination:
+          arguments:
+            columns: [lei, activity_year]
+
+  - name: stg_pmms__weekly_rates
+    description: Freddie Mac PMMS weekly average mortgage rates.
+    columns:
+      - name: week_date
+        description: Survey week date.
+        data_tests: [not_null, unique]
+      - name: rate_year
+        description: Calendar year of the survey week.
+      - name: rate_30y_fixed
+        description: Average 30-year fixed rate, percent.
+        data_tests:
+          - not_null
+          - value_between:
+              arguments: {min_value: 1, max_value: 20}
+      - name: rate_15y_fixed
+        description: Average 15-year fixed rate, percent.
+
+  - name: stg_census__counties
+    description: Census 2020 county reference.
+    columns:
+      - name: county_fips
+        description: Five-digit state + county FIPS code.
+        data_tests: [not_null, unique]
+      - name: state_fips
+        description: Two-digit state FIPS code.
+      - name: state_code
+        description: Two-letter state abbreviation.
+        data_tests: [not_null]
+      - name: county_name
+        description: County or equivalent name.
+
+  - name: stg_ops__ingest_manifest
+    description: Ingestion manifest with pinned column types. One row per landed raw file.
+    columns:
+      - name: dataset
+        description: hmda_lar, hmda_filers, pmms or census_counties.
+        data_tests: [not_null]
+      - name: activity_year
+        description: Partition year; null for reference files.
+      - name: state_code
+        description: Partition state; null for reference files.
+      - name: source_url
+        description: Final URL the file was read from.
+      - name: raw_bytes
+        description: Raw file size in bytes.
+      - name: source_sha256
+        description: sha256 of the raw file.
+        data_tests: [not_null]
+      - name: raw_row_count
+        description: Data rows counted in the raw file.
+      - name: fetched_at
+        description: UTC download time.
+      - name: http_status
+        description: HTTP status of the final response.
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [200]
+    data_tests:
+      - unique_combination:
+          arguments:
+            columns: [dataset, activity_year, state_code]
+
+unit_tests:
+  - name: sentinels_become_null_with_a_status
+    description: NA, Exempt, empty and garbage values never turn into numbers, and each keeps a distinct status.
+    model: stg_hmda__lar_typed
+    given:
+      - input: ref('hmda_codes')
+      - input: ref('hmda_derived_domains')
+      - input: ref('base_hmda__lar')
+        rows:
+          - {source_row_number: 1, interest_rate: "6.875", rate_spread: "0.22", income: "150"}
+          - {source_row_number: 2, interest_rate: "NA", rate_spread: "NA", income: "NA"}
+          - {source_row_number: 3, interest_rate: "Exempt", rate_spread: "Exempt", income: null}
+          - {source_row_number: 4, interest_rate: "abc", rate_spread: "-1.5", income: "-20"}
+    expect:
+      rows:
+        - {source_row_number: 1, interest_rate: 6.875, interest_rate_status: reported, rate_spread: 0.22, rate_spread_status: reported, income_thousands: 150, income_status: reported}
+        - {source_row_number: 2, interest_rate: null, interest_rate_status: not_applicable, rate_spread: null, rate_spread_status: not_applicable, income_thousands: null, income_status: not_applicable}
+        - {source_row_number: 3, interest_rate: null, interest_rate_status: exempt, rate_spread: null, rate_spread_status: exempt, income_thousands: null, income_status: missing}
+        - {source_row_number: 4, interest_rate: null, interest_rate_status: unparseable, rate_spread: -1.5, rate_spread_status: reported, income_thousands: -20, income_status: reported}
+
+  - name: rows_are_classified_with_the_first_failed_rule
+    description: A clean row has no reject reason; each broken row gets the reason for its first failed rule.
+    model: stg_hmda__lar_typed
+    given:
+      - input: ref('hmda_codes')
+      - input: ref('hmda_derived_domains')
+      - input: ref('base_hmda__lar')
+        rows:
+          - &clean_row
+            source_row_number: 1
+            year: 2024
+            state: DE
+            activity_year: 2024
+            state_code: DE
+            lei: "5493001KJTIIGC8Y1R12"
+            action_taken: 1
+            loan_amount: 250000
+            loan_type: 1
+            loan_purpose: 1
+            lien_status: 1
+            occupancy_type: 1
+            construction_method: 1
+            open_end_line_of_credit: 2
+            reverse_mortgage: 2
+            business_or_commercial_purpose: 2
+            conforming_loan_limit: C
+            derived_ethnicity: Joint
+            derived_race: Joint
+            derived_sex: Joint
+            applicant_age: "35-44"
+          - {<<: *clean_row, source_row_number: 2, state_code: RI}
+          - {<<: *clean_row, source_row_number: 3, lei: "SHORT"}
+          - {<<: *clean_row, source_row_number: 4, action_taken: 9}
+          - {<<: *clean_row, source_row_number: 5, loan_amount: 0}
+          - {<<: *clean_row, source_row_number: 6, loan_purpose: 3}
+          - {<<: *clean_row, source_row_number: 7, derived_race: "Not a published category"}
+          - {<<: *clean_row, source_row_number: 8, lei: null, loan_amount: -5}
+    expect:
+      rows:
+        - {source_row_number: 1, reject_reason: null}
+        - {source_row_number: 2, reject_reason: partition_mismatch}
+        - {source_row_number: 3, reject_reason: invalid_lei}
+        - {source_row_number: 4, reject_reason: invalid_action_taken}
+        - {source_row_number: 5, reject_reason: invalid_loan_amount}
+        - {source_row_number: 6, reject_reason: unknown_product_code}
+        - {source_row_number: 7, reject_reason: unknown_domain_value}
+        - {source_row_number: 8, reject_reason: invalid_lei}
+
+  - name: debt_to_income_is_normalised_to_bands
+    model: stg_hmda__lar_typed
+    given:
+      - input: ref('hmda_codes')
+      - input: ref('hmda_derived_domains')
+      - input: ref('base_hmda__lar')
+        rows:
+          - {source_row_number: 1, debt_to_income_ratio: "36"}
+          - {source_row_number: 2, debt_to_income_ratio: "49"}
+          - {source_row_number: 3, debt_to_income_ratio: "30%-<36%"}
+          - {source_row_number: 4, debt_to_income_ratio: "NA"}
+          - {source_row_number: 5, debt_to_income_ratio: "Exempt"}
+          - {source_row_number: 6, debt_to_income_ratio: ">60%"}
+    expect:
+      rows:
+        - {source_row_number: 1, debt_to_income_band: "36%-<50%"}
+        - {source_row_number: 2, debt_to_income_band: "36%-<50%"}
+        - {source_row_number: 3, debt_to_income_band: "30%-<36%"}
+        - {source_row_number: 4, debt_to_income_band: "Not applicable"}
+        - {source_row_number: 5, debt_to_income_band: "Exempt"}
+        - {source_row_number: 6, debt_to_income_band: ">60%"}
+
+  - name: one_name_per_lender_year
+    description: The spelling with the most records wins; ties break alphabetically; counts add up.
+    model: stg_hmda__filers
+    given:
+      - input: ref('base_hmda__filers')
+        rows:
+          - {lei: A, activity_year: 2024, institution_name: "Acme Bank", lar_count: 10}
+          - {lei: A, activity_year: 2024, institution_name: "ACME BANK", lar_count: 30}
+          - {lei: A, activity_year: 2024, institution_name: "Acme Bank", lar_count: 5}
+          - {lei: B, activity_year: 2024, institution_name: "Beta", lar_count: 1}
+          - {lei: B, activity_year: 2024, institution_name: "Alpha", lar_count: 1}
+    expect:
+      rows:
+        - {lei: A, activity_year: 2024, lender_name: "ACME BANK", lar_count_in_scope: 45}
+        - {lei: B, activity_year: 2024, lender_name: "Alpha", lar_count_in_scope: 2}

@@ -1,0 +1,65 @@
+name: mortgage_metrics
+version: "0.1.0"
+config-version: 2
+profile: mortgage_metrics
+require-dbt-version: [">=1.12.0", "<1.13.0"]
+
+model-paths: ["models"]
+seed-paths: ["seeds"]
+macro-paths: ["macros"]
+snapshot-paths: ["snapshots"]
+test-paths: ["tests"]
+analysis-paths: ["analyses"]
+target-path: target
+clean-targets: ["target", "dbt_packages"]
+
+vars:
+  # Years whose fact partitions are rebuilt even if the source file hash is
+  # unchanged. Scheduled and backfill runs pass the run's activity year here.
+  reprocess_years: []
+  # Volume anomaly thresholds, percent change in rows year over year per state.
+  volume_warn_pct: 40
+  volume_fail_pct: 80
+  # First HMDA activity year in the current (2018+) LAR format.
+  first_activity_year: 2018
+
+on-run-start:
+  - "{{ create_ops_objects() }}"
+
+models:
+  mortgage_metrics:
+    +persist_docs:
+      relation: true
+      columns: true
+    staging:
+      +schema: staging
+      +materialized: view
+    intermediate:
+      +schema: intermediate
+      +materialized: view
+    marts:
+      core:
+        +schema: marts
+        +materialized: table
+      ops:
+        +schema: ops
+        +materialized: table
+    semantic:
+      +schema: marts
+      +materialized: table
+
+seeds:
+  mortgage_metrics:
+    +schema: reference
+    hmda_codes:
+      +column_types: {field: varchar, code: integer, label: varchar}
+    hmda_derived_domains:
+      +column_types: {domain: varchar, value: varchar, sort_order: integer}
+
+snapshots:
+  mortgage_metrics:
+    +target_schema: snapshots
+
+data_tests:
+  mortgage_metrics:
+    +store_failures: false

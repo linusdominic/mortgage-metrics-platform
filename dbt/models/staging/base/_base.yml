@@ -1,0 +1,18 @@
+version: 2
+
+models:
+  - name: base_hmda__lar
+    description: Pass-through view over bronze.hmda_lar, all 99 LAR columns plus lineage columns.
+    columns:
+      - name: source_row_number
+        description: 1-based position of the row in the raw CSV.
+        data_tests: [not_null]
+      - name: _source_sha256
+        description: sha256 of the raw file.
+        data_tests: [not_null]
+  - name: base_hmda__filers
+    description: Pass-through view over bronze.hmda_filers.
+    columns:
+      - name: lei
+        description: Legal Entity Identifier.
+        data_tests: [not_null]

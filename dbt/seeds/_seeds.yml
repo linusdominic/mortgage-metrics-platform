@@ -1,0 +1,40 @@
+version: 2
+
+seeds:
+  - name: hmda_codes
+    description: >
+      Code-to-label lookup for the integer-coded HMDA LAR fields used by the marts.
+      Transcribed from the FFIEC "Public HMDA - LAR Data Fields" documentation.
+      1111 is the published code for "Exempt".
+    columns:
+      - name: field
+        description: LAR field the code belongs to (bronze column name, without position suffix).
+        data_tests: [not_null]
+      - name: code
+        description: Integer code as published.
+        data_tests: [not_null]
+      - name: label
+        description: Published meaning of the code.
+        data_tests: [not_null]
+    data_tests:
+      - unique_combination:
+          arguments:
+            columns: [field, code]
+
+  - name: hmda_derived_domains
+    description: >
+      Allowed values of the text-valued LAR fields that feed the junk dimensions
+      (derived ethnicity, race and sex, applicant age band, conforming loan limit flag).
+    columns:
+      - name: domain
+        description: LAR field name.
+        data_tests: [not_null]
+      - name: value
+        description: Value as published.
+        data_tests: [not_null]
+      - name: sort_order
+        description: Display order within the domain.
+    data_tests:
+      - unique_combination:
+          arguments:
+            columns: [domain, value]

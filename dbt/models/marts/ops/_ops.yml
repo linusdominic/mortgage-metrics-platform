@@ -1,0 +1,160 @@
+version: 2
+
+models:
+  - name: rejected_lar_rows
+    description: >
+      Quarantine. LAR rows that failed a staging rule, with the reason and enough
+      context to investigate. Rows here are excluded from the fact and counted in
+      the reconciliation, so nothing is dropped silently.
+    config:
+      contract:
+        enforced: true
+    columns:
+      - name: application_id
+        description: Positional surrogate identifier of the rejected row.
+        data_type: varchar
+        constraints:
+          - type: not_null
+        data_tests: [unique]
+      - name: activity_year
+        description: Partition year the row was loaded under.
+        data_type: integer
+        constraints:
+          - type: not_null
+      - name: state_code
+        description: Partition state the row was loaded under.
+        data_type: varchar
+        constraints:
+          - type: not_null
+      - name: source_row_number
+        description: Position of the row in the raw file.
+        data_type: bigint
+      - name: reject_reason
+        description: The first staging rule the row failed.
+        data_type: varchar
+        constraints:
+          - type: not_null
+      - name: lei
+        description: LEI as reported (may be the invalid value).
+        data_type: varchar
+      - name: reported_activity_year
+        description: Activity year on the row itself.
+        data_type: integer
+      - name: reported_state_code
+        description: State on the row itself.
+        data_type: varchar
+      - name: action_taken
+        description: Action taken code as reported.
+        data_type: integer
+      - name: loan_amount
+        description: Loan amount as reported.
+        data_type: double
+      - name: _source_sha256
+        description: sha256 of the raw file.
+        data_type: varchar
+      - name: quarantined_at
+        description: When the row was quarantined.
+        data_type: timestamp with time zone
+
+  - name: ops_reconciliation
+    description: >
+      Row-count and checksum reconciliation per LAR partition across raw manifest,
+      bronze, staging (accepted + quarantined) and fact. One row per partition,
+      refreshed for the partitions loaded in a run.
+    config:
+      contract:
+        enforced: true
+    data_tests:
+      - unique_combination:
+          arguments:
+            columns: [activity_year, state_code]
+    columns:
+      - name: activity_year
+        description: Partition year.
+        data_type: integer
+        constraints:
+          - type: not_null
+      - name: state_code
+        description: Partition state.
+        data_type: varchar
+        constraints:
+          - type: not_null
+      - name: source_sha256
+        description: sha256 of the raw file per the manifest.
+        data_type: varchar
+      - name: raw_bytes
+        description: Raw file size per the manifest.
+        data_type: bigint
+      - name: raw_row_count
+        description: Data rows in the raw file per the manifest.
+        data_type: bigint
+      - name: bronze_rows
+        description: Rows in the bronze Parquet partition.
+        data_type: bigint
+      - name: staged_rows
+        description: Rows accepted by staging.
+        data_type: bigint
+      - name: quarantined_rows
+        description: Rows in the quarantine table for the partition.
+        data_type: bigint
+      - name: fact_rows
+        description: Rows in fct_loan_applications for the partition.
+        data_type: bigint
+      - name: bronze_loan_amount
+        description: Sum of loan_amount in bronze (checksum).
+        data_type: double
+      - name: staged_loan_amount
+        description: Sum of loan_amount over accepted staging rows (checksum).
+        data_type: double
+      - name: fact_loan_amount
+        description: Sum of loan_amount in the fact (checksum).
+        data_type: double
+      - name: is_raw_to_bronze_balanced
+        description: Manifest row count equals bronze rows and the file hash matches.
+        data_type: boolean
+      - name: is_bronze_to_staging_balanced
+        description: Bronze rows equal accepted plus quarantined rows.
+        data_type: boolean
+      - name: is_staging_to_fact_balanced
+        description: Accepted rows equal fact rows, ids are unique, loan amount sums match, hash matches.
+        data_type: boolean
+      - name: is_balanced
+        description: All three hops balance.
+        data_type: boolean
+        constraints:
+          - type: not_null
+      - name: reconciled_at
+        description: When the partition was last reconciled.
+        data_type: timestamp with time zone
+
+  - name: ops_volume_anomalies
+    description: Year-over-year row-count change per state with an ok / warn / fail / no_baseline status.
+    config:
+      contract:
+        enforced: true
+    columns:
+      - name: activity_year
+        description: Activity year.
+        data_type: integer
+      - name: state_code
+        description: State.
+        data_type: varchar
+      - name: fact_rows
+        description: Fact rows for the state and year.
+        data_type: bigint
+      - name: previous_year
+        description: Previous loaded year for the state.
+        data_type: integer
+      - name: previous_year_rows
+        description: Fact rows in the previous loaded year.
+        data_type: bigint
+      - name: pct_change
+        description: Percent change against the previous year.
+        data_type: double
+      - name: status
+        description: ok, warn, fail, or no_baseline when the preceding year is not loaded.
+        data_type: varchar
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [ok, warn, fail, no_baseline]

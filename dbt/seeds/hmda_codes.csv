@@ -1,0 +1,46 @@
+field,code,label
+action_taken,1,Loan originated
+action_taken,2,Application approved but not accepted
+action_taken,3,Application denied
+action_taken,4,Application withdrawn by applicant
+action_taken,5,File closed for incompleteness
+action_taken,6,Purchased loan
+action_taken,7,Preapproval request denied
+action_taken,8,Preapproval request approved but not accepted
+loan_type,1,Conventional
+loan_type,2,FHA
+loan_type,3,VA
+loan_type,4,USDA RHS or FSA
+loan_purpose,1,Home purchase
+loan_purpose,2,Home improvement
+loan_purpose,31,Refinancing
+loan_purpose,32,Cash-out refinancing
+loan_purpose,4,Other purpose
+loan_purpose,5,Not applicable
+lien_status,1,First lien
+lien_status,2,Subordinate lien
+occupancy_type,1,Principal residence
+occupancy_type,2,Second residence
+occupancy_type,3,Investment property
+construction_method,1,Site-built
+construction_method,2,Manufactured home
+open_end_line_of_credit,1,Open-end line of credit
+open_end_line_of_credit,2,Not an open-end line of credit
+open_end_line_of_credit,1111,Exempt
+reverse_mortgage,1,Reverse mortgage
+reverse_mortgage,2,Not a reverse mortgage
+reverse_mortgage,1111,Exempt
+business_or_commercial_purpose,1,Primarily business or commercial purpose
+business_or_commercial_purpose,2,Not primarily business or commercial purpose
+business_or_commercial_purpose,1111,Exempt
+denial_reason,1,Debt-to-income ratio
+denial_reason,2,Employment history
+denial_reason,3,Credit history
+denial_reason,4,Collateral
+denial_reason,5,Insufficient cash (downpayment or closing costs)
+denial_reason,6,Unverifiable information
+denial_reason,7,Credit application incomplete
+denial_reason,8,Mortgage insurance denied
+denial_reason,9,Other
+denial_reason,10,Not applicable
+denial_reason,1111,Exempt

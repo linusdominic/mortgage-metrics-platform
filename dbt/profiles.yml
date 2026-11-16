@@ -1,0 +1,26 @@
+# Checked in on purpose: there are no secrets, the only input is MMP_DATA_DIR.
+mortgage_metrics:
+  target: "{{ env_var('DBT_TARGET', 'dev') }}"
+  outputs:
+    dev: &duckdb
+      type: duckdb
+      path: "{{ env_var('MMP_DATA_DIR', '../data') }}/warehouse/mortgage.duckdb"
+      threads: 4
+      settings:
+        memory_limit: "{{ env_var('MMP_DUCKDB_MEMORY_LIMIT', '1GB') }}"
+        preserve_insertion_order: false
+    # Same database file, schemas prefixed with ci_. Used by slim CI so that
+    # deferred refs to unmodified models resolve inside one DuckDB file.
+    ci:
+      <<: *duckdb
+    # Memory-constrained container (docker/airflow): one dbt thread, two DuckDB
+    # threads, a hard memory cap and a spill directory. Four concurrent tests over
+    # the staging views were enough to hit a 400MB cap during testing.
+    airflow:
+      <<: *duckdb
+      threads: 1
+      settings:
+        memory_limit: "{{ env_var('MMP_DUCKDB_MEMORY_LIMIT', '400MB') }}"
+        threads: 2
+        preserve_insertion_order: false
+        temp_directory: "{{ env_var('MMP_DATA_DIR', '../data') }}/warehouse/duckdb_tmp"

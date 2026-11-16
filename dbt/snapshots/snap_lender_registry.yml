@@ -1,0 +1,31 @@
+version: 2
+
+snapshots:
+  - name: snap_lender_registry
+    description: >
+      dbt snapshot (SCD2, check strategy) of each lender's current name. It records
+      a change at the moment a pipeline run first observes it, which is the right
+      tool for "what did we believe on date X" and for revisions to already
+      published years. It is not the source of dim_lender: a snapshot only knows
+      the order in which runs happened, so it cannot be rebuilt or backfilled
+      deterministically. dim_lender derives its versions from the year-stamped
+      filer lists instead. See docs/adr/0004-lender-scd2.md.
+    relation: ref('int_lender__current')
+    config:
+      schema: snapshots
+      unique_key: lei
+      strategy: check
+      check_cols: [lender_name]
+      hard_deletes: invalidate
+    columns:
+      - name: lei
+        description: Legal Entity Identifier.
+        data_tests: [not_null]
+      - name: lender_name
+        description: Lender name as of the snapshot row's validity window.
+      - name: as_of_year
+        description: Latest loaded activity year for the lei when the row was captured.
+      - name: dbt_valid_from
+        description: When this version was first observed by a pipeline run.
+      - name: dbt_valid_to
+        description: When this version was superseded; null for the current version.

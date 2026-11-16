@@ -1,0 +1,218 @@
+version: 2
+
+models:
+  - name: int_pmms__annual
+    description: Freddie Mac PMMS weekly rates summarised per calendar year.
+    columns:
+      - name: rate_year
+        description: Calendar year.
+        data_tests: [not_null, unique]
+      - name: survey_weeks
+        description: Number of weekly observations in the year.
+      - name: pmms_30y_avg
+        description: Mean of the weekly 30-year fixed rate, percent.
+      - name: pmms_30y_min
+        description: Lowest weekly 30-year fixed rate in the year.
+      - name: pmms_30y_max
+        description: Highest weekly 30-year fixed rate in the year.
+      - name: pmms_15y_avg
+        description: Mean of the weekly 15-year fixed rate, percent.
+
+  - name: int_lender__names_by_year
+    description: Lender name and lender key per (lei, activity_year) for every lei present in the LAR.
+    columns:
+      - name: lei
+        description: Legal Entity Identifier.
+        data_tests: [not_null]
+      - name: activity_year
+        description: Activity year.
+        data_tests: [not_null]
+      - name: lender_name
+        description: Name filed for the year, or a placeholder when the lei is not in the filer list.
+        data_tests: [not_null]
+      - name: is_in_filer_list
+        description: False when the name is the placeholder.
+      - name: lender_key
+        description: md5 of (lei, lender_name); joins to dim_lender.
+        data_tests: [not_null]
+    data_tests:
+      - unique_combination:
+          arguments:
+            columns: [lei, activity_year]
+
+  - name: int_lender__current
+    description: Latest reported name per lei. Source relation for snap_lender_registry.
+    columns:
+      - name: lei
+        description: Legal Entity Identifier.
+        data_tests: [not_null, unique]
+      - name: lender_name
+        description: Name reported in the lei's latest loaded year.
+      - name: as_of_year
+        description: That latest year.
+
+  - name: int_hmda__applications_enriched
+    description: >
+      Application-grain rows with outcome flags, derived measures and dimension keys.
+      This is where the business definitions live (what counts as an application, an
+      approval, a denial); the fact only casts and labels.
+    columns:
+      - name: application_id
+        description: Positional surrogate identifier.
+        data_tests: [not_null]
+      - name: is_application
+        description: False for purchased loans (action 6), which were not applications to the reporter.
+      - name: is_originated
+        description: Action 1.
+      - name: is_approved
+        description: Actions 1 and 2 (originated, or approved but not accepted).
+      - name: is_denied
+        description: Action 3.
+      - name: is_decisioned
+        description: Actions 1, 2 and 3. Denominator of approval and denial rates.
+      - name: loan_to_income_ratio
+        description: loan_amount / annual income in dollars; null unless income is reported and positive.
+      - name: rate_over_pmms_30y
+        description: >
+          Note rate minus the year's average 30-year PMMS rate, only for originated,
+          first-lien, 360-month, closed-end, non-reverse loans.
+
+  - name: int_hmda__denial_reasons
+    description: One row per stated denial reason per denied application.
+    columns:
+      - name: application_id
+        description: Denied application.
+        data_tests: [not_null]
+      - name: reason_position
+        description: 1-4, the denial_reason-N field the reason was reported in.
+      - name: denial_reason_code
+        description: HMDA denial reason code 1-9.
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [1, 2, 3, 4, 5, 6, 7, 8, 9]
+      - name: denial_reason
+        description: Label of the code.
+        data_tests: [not_null]
+
+unit_tests:
+  - name: outcome_flags_follow_action_taken
+    description: >
+      Pins the definitions the approval, denial and origination metrics are built on,
+      one row per action_taken code.
+    model: int_hmda__applications_enriched
+    given:
+      - input: ref('int_lender__names_by_year')
+        rows: []
+      - input: ref('int_pmms__annual')
+        rows: []
+      - input: ref('stg_hmda__loan_applications')
+        rows:
+          - {application_id: a1, action_taken: 1, denial_reason_1: 10}
+          - {application_id: a2, action_taken: 2, denial_reason_1: 10}
+          - {application_id: a3, action_taken: 3, denial_reason_1: 3}
+          - {application_id: a4, action_taken: 4, denial_reason_1: 10}
+          - {application_id: a5, action_taken: 5, denial_reason_1: 10}
+          - {application_id: a6, action_taken: 6, denial_reason_1: 10}
+          - {application_id: a7, action_taken: 7, denial_reason_1: 1}
+          - {application_id: a8, action_taken: 8, denial_reason_1: 10}
+          - {application_id: a9, action_taken: 3, denial_reason_1: 10}
+    expect:
+      rows:
+        - {application_id: a1, is_application: true, is_originated: true, is_approved: true, is_denied: false, is_decisioned: true, is_withdrawn_or_incomplete: false, is_preapproval_request: false, primary_denial_reason_code: null}
+        - {application_id: a2, is_application: true, is_originated: false, is_approved: true, is_denied: false, is_decisioned: true, is_withdrawn_or_incomplete: false, is_preapproval_request: false, primary_denial_reason_code: null}
+        - {application_id: a3, is_application: true, is_originated: false, is_approved: false, is_denied: true, is_decisioned: true, is_withdrawn_or_incomplete: false, is_preapproval_request: false, primary_denial_reason_code: 3}
+        - {application_id: a4, is_application: true, is_originated: false, is_approved: false, is_denied: false, is_decisioned: false, is_withdrawn_or_incomplete: true, is_preapproval_request: false, primary_denial_reason_code: null}
+        - {application_id: a5, is_application: true, is_originated: false, is_approved: false, is_denied: false, is_decisioned: false, is_withdrawn_or_incomplete: true, is_preapproval_request: false, primary_denial_reason_code: null}
+        - {application_id: a6, is_application: false, is_originated: false, is_approved: false, is_denied: false, is_decisioned: false, is_withdrawn_or_incomplete: false, is_preapproval_request: false, primary_denial_reason_code: null}
+        - {application_id: a7, is_application: true, is_originated: false, is_approved: false, is_denied: false, is_decisioned: false, is_withdrawn_or_incomplete: false, is_preapproval_request: true, primary_denial_reason_code: null}
+        - {application_id: a8, is_application: true, is_originated: false, is_approved: false, is_denied: false, is_decisioned: false, is_withdrawn_or_incomplete: false, is_preapproval_request: true, primary_denial_reason_code: null}
+        - {application_id: a9, is_application: true, is_originated: false, is_approved: false, is_denied: true, is_decisioned: true, is_withdrawn_or_incomplete: false, is_preapproval_request: false, primary_denial_reason_code: null}
+
+  - name: rate_spread_is_banded_for_originated_loans_only
+    model: int_hmda__applications_enriched
+    given:
+      - input: ref('int_lender__names_by_year')
+        rows: []
+      - input: ref('int_pmms__annual')
+        rows: []
+      - input: ref('stg_hmda__loan_applications')
+        rows:
+          - {application_id: a1, action_taken: 1, rate_spread: -0.2}
+          - {application_id: a2, action_taken: 1, rate_spread: 0.0}
+          - {application_id: a3, action_taken: 1, rate_spread: 0.5}
+          - {application_id: a4, action_taken: 1, rate_spread: 1.49}
+          - {application_id: a5, action_taken: 1, rate_spread: 1.5}
+          - {application_id: a6, action_taken: 1, rate_spread: 3.0}
+          - {application_id: a7, action_taken: 1, rate_spread: null}
+          - {application_id: a8, action_taken: 3, rate_spread: 0.4}
+    expect:
+      rows:
+        - {application_id: a1, rate_spread_band: "Below 0"}
+        - {application_id: a2, rate_spread_band: "0 to <0.5"}
+        - {application_id: a3, rate_spread_band: "0.5 to <1.0"}
+        - {application_id: a4, rate_spread_band: "1.0 to <1.5"}
+        - {application_id: a5, rate_spread_band: "1.5 to <3.0"}
+        - {application_id: a6, rate_spread_band: "3.0 or more"}
+        - {application_id: a7, rate_spread_band: "Not reported"}
+        - {application_id: a8, rate_spread_band: "Not originated"}
+
+  - name: loan_to_income_needs_reported_positive_income
+    model: int_hmda__applications_enriched
+    given:
+      - input: ref('int_lender__names_by_year')
+        rows: []
+      - input: ref('int_pmms__annual')
+        rows: []
+      - input: ref('stg_hmda__loan_applications')
+        rows:
+          - {application_id: a1, action_taken: 1, loan_amount: 300000, income_thousands: 100, income_status: reported}
+          - {application_id: a2, action_taken: 1, loan_amount: 300000, income_thousands: null, income_status: not_applicable}
+          - {application_id: a3, action_taken: 1, loan_amount: 300000, income_thousands: 0, income_status: reported}
+          - {application_id: a4, action_taken: 1, loan_amount: 300000, income_thousands: -50, income_status: reported}
+    expect:
+      rows:
+        - {application_id: a1, loan_to_income_ratio: 3.0}
+        - {application_id: a2, loan_to_income_ratio: null}
+        - {application_id: a3, loan_to_income_ratio: null}
+        - {application_id: a4, loan_to_income_ratio: null}
+
+  - name: pmms_spread_only_for_comparable_loans
+    description: The PMMS comparison applies to originated, first-lien, 30-year, closed-end, non-reverse loans only.
+    model: int_hmda__applications_enriched
+    given:
+      - input: ref('int_lender__names_by_year')
+        rows: []
+      - input: ref('int_pmms__annual')
+        rows:
+          - {rate_year: 2024, pmms_30y_avg: 6.5}
+      - input: ref('stg_hmda__loan_applications')
+        rows:
+          - {application_id: a1, activity_year: 2024, action_taken: 1, interest_rate: 7.0, loan_term_months: 360, lien_status: 1, open_end_line_of_credit: 2, reverse_mortgage: 2}
+          - {application_id: a2, activity_year: 2024, action_taken: 3, interest_rate: 7.0, loan_term_months: 360, lien_status: 1, open_end_line_of_credit: 2, reverse_mortgage: 2}
+          - {application_id: a3, activity_year: 2024, action_taken: 1, interest_rate: 7.0, loan_term_months: 180, lien_status: 1, open_end_line_of_credit: 2, reverse_mortgage: 2}
+          - {application_id: a4, activity_year: 2024, action_taken: 1, interest_rate: 7.0, loan_term_months: 360, lien_status: 2, open_end_line_of_credit: 2, reverse_mortgage: 2}
+          - {application_id: a5, activity_year: 2024, action_taken: 1, interest_rate: null, loan_term_months: 360, lien_status: 1, open_end_line_of_credit: 2, reverse_mortgage: 2}
+          - {application_id: a6, activity_year: 2024, action_taken: 1, interest_rate: 7.0, loan_term_months: 360, lien_status: 1, open_end_line_of_credit: 1, reverse_mortgage: 2}
+    expect:
+      rows:
+        - {application_id: a1, rate_over_pmms_30y: 0.5}
+        - {application_id: a2, rate_over_pmms_30y: null}
+        - {application_id: a3, rate_over_pmms_30y: null}
+        - {application_id: a4, rate_over_pmms_30y: null}
+        - {application_id: a5, rate_over_pmms_30y: null}
+        - {application_id: a6, rate_over_pmms_30y: null}
+
+  - name: denial_reasons_unpivot_skips_not_applicable
+    model: int_hmda__denial_reasons
+    given:
+      - input: ref('hmda_codes')
+      - input: ref('int_hmda__applications_enriched')
+        rows:
+          - {application_id: a1, is_denied: true, denial_reason_1: 1, denial_reason_2: 3, denial_reason_3: null, denial_reason_4: null}
+          - {application_id: a2, is_denied: true, denial_reason_1: 10, denial_reason_2: null, denial_reason_3: null, denial_reason_4: null}
+          - {application_id: a3, is_denied: false, denial_reason_1: 4, denial_reason_2: null, denial_reason_3: null, denial_reason_4: null}
+    expect:
+      rows:
+        - {application_id: a1, reason_position: 1, denial_reason_code: 1, denial_reason: "Debt-to-income ratio"}
+        - {application_id: a1, reason_position: 2, denial_reason_code: 3, denial_reason: "Credit history"}

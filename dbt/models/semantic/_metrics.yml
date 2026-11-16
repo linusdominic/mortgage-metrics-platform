@@ -1,0 +1,195 @@
+version: 2
+
+# The governed metric catalogue. A metric is defined here and nowhere else:
+# the static report, the MCP server and the evals all compile requests through
+# MetricFlow against these definitions.
+#
+# meta.unit is used by the serving layer for formatting and by the catalogue.
+
+metrics:
+  - name: application_count
+    label: Applications
+    description: >
+      Number of applications and preapproval requests. Purchased loans (action 6)
+      are excluded because they were not applications to the reporting lender.
+    type: simple
+    type_params:
+      measure: applications
+    config:
+      meta: {unit: count, owner: analytics-engineering}
+
+  - name: lar_record_count
+    label: LAR records
+    description: All reported LAR records, including purchased loans. Use for volume reconciliation, not for rates.
+    type: simple
+    type_params:
+      measure: lar_records
+    config:
+      meta: {unit: count, owner: analytics-engineering}
+
+  - name: origination_count
+    label: Originations
+    description: Number of loans originated (action 1).
+    type: simple
+    type_params:
+      measure: originations
+    config:
+      meta: {unit: count, owner: analytics-engineering}
+
+  - name: denial_count
+    label: Denials
+    description: Number of applications denied (action 3). Preapproval denials are not included.
+    type: simple
+    type_params:
+      measure: denials
+    config:
+      meta: {unit: count, owner: analytics-engineering}
+
+  - name: decisioned_application_count
+    label: Decisioned applications
+    description: Applications the lender decided - originated, approved but not accepted, or denied (actions 1, 2, 3).
+    type: simple
+    type_params:
+      measure: decisioned_applications
+    config:
+      meta: {unit: count, owner: analytics-engineering}
+
+  - name: approval_count
+    label: Approvals
+    description: Applications approved - originated, or approved but not accepted (actions 1, 2).
+    type: simple
+    type_params:
+      measure: approvals
+    config:
+      meta: {unit: count, owner: analytics-engineering}
+
+  - name: withdrawn_or_incomplete_count
+    label: Withdrawn or incomplete
+    description: Applications withdrawn by the applicant or closed for incompleteness (actions 4, 5).
+    type: simple
+    type_params:
+      measure: withdrawn_or_incomplete
+    config:
+      meta: {unit: count, owner: analytics-engineering}
+
+  - name: approval_rate
+    label: Approval rate
+    description: >
+      Approvals divided by decisioned applications: (actions 1 + 2) / (actions 1 + 2 + 3).
+      Withdrawn, incomplete, purchased and preapproval records are in neither side.
+    type: ratio
+    type_params:
+      numerator: approval_count
+      denominator: decisioned_application_count
+    config:
+      meta: {unit: ratio, owner: analytics-engineering}
+
+  - name: denial_rate
+    label: Denial rate
+    description: Denials divided by decisioned applications - action 3 / (actions 1 + 2 + 3). Equals 1 - approval_rate.
+    type: ratio
+    type_params:
+      numerator: denial_count
+      denominator: decisioned_application_count
+    config:
+      meta: {unit: ratio, owner: analytics-engineering}
+
+  - name: origination_rate
+    label: Origination rate
+    description: Originations divided by applications (pull-through). Purchased loans are excluded from both sides.
+    type: ratio
+    type_params:
+      numerator: origination_count
+      denominator: application_count
+    config:
+      meta: {unit: ratio, owner: analytics-engineering}
+
+  - name: originated_loan_volume
+    label: Originated loan volume
+    description: Sum of loan amounts of originated loans, in dollars. Amounts are published as $10,000-band midpoints.
+    type: simple
+    type_params:
+      measure: originated_amount
+    config:
+      meta: {unit: usd, owner: analytics-engineering}
+
+  - name: avg_loan_amount
+    label: Average originated loan amount
+    description: Mean loan amount of originated loans, in dollars.
+    type: simple
+    type_params:
+      measure: originated_amount_avg
+    config:
+      meta: {unit: usd, owner: analytics-engineering}
+
+  - name: median_loan_amount
+    label: Median originated loan amount
+    description: Median loan amount of originated loans, in dollars. Prefer this to the mean; the amount distribution has a long right tail.
+    type: simple
+    type_params:
+      measure: originated_amount_median
+    config:
+      meta: {unit: usd, owner: analytics-engineering}
+
+  - name: avg_interest_rate
+    label: Average note rate
+    description: Mean note rate of originated loans that reported a rate, in percent. Exempt and not-applicable records are excluded.
+    type: simple
+    type_params:
+      measure: originated_interest_rate_avg
+    config:
+      meta: {unit: percent, owner: analytics-engineering}
+
+  - name: avg_rate_spread
+    label: Average rate spread
+    description: >
+      Mean rate spread (APR minus average prime offer rate) of originated loans that
+      reported one, in percentage points. Sensitive to a few extreme reported values;
+      see median_rate_spread.
+    type: simple
+    type_params:
+      measure: originated_rate_spread_avg
+    config:
+      meta: {unit: percentage_points, owner: analytics-engineering}
+
+  - name: median_rate_spread
+    label: Median rate spread
+    description: Median rate spread of originated loans that reported one, in percentage points.
+    type: simple
+    type_params:
+      measure: originated_rate_spread_median
+    config:
+      meta: {unit: percentage_points, owner: analytics-engineering}
+
+  - name: median_loan_to_income
+    label: Median loan-to-income
+    description: Median of loan amount divided by annual income, over applications with reported positive income.
+    type: simple
+    type_params:
+      measure: loan_to_income_median
+    config:
+      meta: {unit: ratio, owner: analytics-engineering}
+
+  - name: avg_rate_over_pmms_30y
+    label: Average note rate over PMMS 30-year
+    description: >
+      Mean of note rate minus the activity year's average Freddie Mac 30-year PMMS rate,
+      for originated first-lien 360-month closed-end loans, in percentage points. The
+      benchmark is an annual average because the public LAR has no dates.
+    type: simple
+    type_params:
+      measure: rate_over_pmms_30y_avg
+    config:
+      meta: {unit: percentage_points, owner: analytics-engineering}
+
+  - name: denial_reason_citations
+    label: Denial reason citations
+    description: >
+      Number of times a denial reason was cited. Group by denial_reason for the reason
+      mix. A denial citing several reasons is counted once per reason, so the total
+      exceeds denial_count.
+    type: simple
+    type_params:
+      measure: denial_reason_citations
+    config:
+      meta: {unit: count, owner: analytics-engineering}

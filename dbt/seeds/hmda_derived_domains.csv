@@ -1,0 +1,32 @@
+domain,value,sort_order
+derived_ethnicity,Hispanic or Latino,1
+derived_ethnicity,Not Hispanic or Latino,2
+derived_ethnicity,Joint,3
+derived_ethnicity,Free Form Text Only,4
+derived_ethnicity,Ethnicity Not Available,5
+derived_race,American Indian or Alaska Native,1
+derived_race,Asian,2
+derived_race,Black or African American,3
+derived_race,Native Hawaiian or Other Pacific Islander,4
+derived_race,White,5
+derived_race,2 or more minority races,6
+derived_race,Joint,7
+derived_race,Free Form Text Only,8
+derived_race,Race Not Available,9
+derived_sex,Male,1
+derived_sex,Female,2
+derived_sex,Joint,3
+derived_sex,Sex Not Available,4
+applicant_age,<25,1
+applicant_age,25-34,2
+applicant_age,35-44,3
+applicant_age,45-54,4
+applicant_age,55-64,5
+applicant_age,65-74,6
+applicant_age,>74,7
+applicant_age,8888,8
+applicant_age,9999,9
+conforming_loan_limit,C,1
+conforming_loan_limit,NC,2
+conforming_loan_limit,U,3
+conforming_loan_limit,NA,4

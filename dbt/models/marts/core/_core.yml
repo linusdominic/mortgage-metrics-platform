@@ -1,0 +1,547 @@
+version: 2
+
+models:
+  - name: fct_loan_applications
+    description: >
+      Fact table at the grain of one HMDA LAR record: an application, a preapproval
+      request or a purchased loan, as reported by one institution for one activity
+      year. HMDA is application and origination data; it says nothing about what
+      happened to a loan after closing (no payments, delinquency or servicing).
+      Incremental, loaded by (activity_year, state_code) partition overwrite.
+    config:
+      contract:
+        enforced: true
+    data_tests:
+      - unique_combination:
+          arguments:
+            columns: [activity_year, state_code, source_row_number]
+    columns:
+      - name: application_id
+        description: >
+          Surrogate key, md5 of (activity year, state, row position in the raw file).
+          The public LAR has no record identifier, so this is stable only for a given
+          version of a source file; a changed file replaces its whole partition.
+        data_type: varchar
+        constraints:
+          - type: not_null
+        data_tests: [unique, not_null]
+      - name: lender_key
+        description: Foreign key to dim_lender (the lender name version filed for this activity year).
+        data_type: varchar
+        constraints:
+          - type: not_null
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_lender')
+                field: lender_key
+      - name: geography_key
+        description: Foreign key to dim_geography (county, or the state's "county not reported" member).
+        data_type: varchar
+        constraints:
+          - type: not_null
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_geography')
+                field: geography_key
+      - name: loan_product_key
+        description: Foreign key to dim_loan_product.
+        data_type: varchar
+        constraints:
+          - type: not_null
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_loan_product')
+                field: loan_product_key
+      - name: applicant_demographics_key
+        description: Foreign key to dim_applicant_demographics.
+        data_type: varchar
+        constraints:
+          - type: not_null
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_applicant_demographics')
+                field: applicant_demographics_key
+      - name: date_key
+        description: Foreign key to dim_date (year grain).
+        data_type: integer
+        constraints:
+          - type: not_null
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('dim_date')
+                field: date_key
+      - name: activity_year
+        description: Calendar year in which the final action was taken. Partition column.
+        data_type: integer
+        constraints:
+          - type: not_null
+      - name: activity_year_start
+        description: January 1 of the activity year. Time dimension for the semantic layer.
+        data_type: date
+        constraints:
+          - type: not_null
+      - name: state_code
+        description: Two-letter property state. Partition column.
+        data_type: varchar
+        constraints:
+          - type: not_null
+      - name: lei
+        description: Legal Entity Identifier of the reporting institution (degenerate dimension).
+        data_type: varchar
+        constraints:
+          - type: not_null
+      - name: action_taken_code
+        description: HMDA action taken code, 1-8.
+        data_type: integer
+        constraints:
+          - type: not_null
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [1, 2, 3, 4, 5, 6, 7, 8]
+      - name: action_taken
+        description: Label of the action taken code.
+        data_type: varchar
+        data_tests: [not_null]
+      - name: is_application
+        description: True unless the record is a purchased loan (action 6).
+        data_type: boolean
+        constraints:
+          - type: not_null
+      - name: is_purchased_loan
+        description: True for action 6.
+        data_type: boolean
+        constraints:
+          - type: not_null
+      - name: is_originated
+        description: True for action 1, loan originated.
+        data_type: boolean
+        constraints:
+          - type: not_null
+      - name: is_approved
+        description: True for actions 1 and 2 (originated, or approved but not accepted by the applicant).
+        data_type: boolean
+        constraints:
+          - type: not_null
+      - name: is_denied
+        description: True for action 3, application denied.
+        data_type: boolean
+        constraints:
+          - type: not_null
+      - name: is_decisioned
+        description: True for actions 1, 2 and 3, the applications the lender made a credit decision on.
+        data_type: boolean
+        constraints:
+          - type: not_null
+      - name: is_withdrawn_or_incomplete
+        description: True for actions 4 and 5.
+        data_type: boolean
+        constraints:
+          - type: not_null
+      - name: is_preapproval_request
+        description: True for actions 7 and 8. Preapproval requests are excluded from approval and denial rates.
+        data_type: boolean
+        constraints:
+          - type: not_null
+      - name: primary_denial_reason_code
+        description: First stated denial reason code for denied applications; null otherwise.
+        data_type: integer
+      - name: primary_denial_reason
+        description: Label of the first stated denial reason, or "Not denied or not stated".
+        data_type: varchar
+        constraints:
+          - type: not_null
+      - name: debt_to_income_band
+        description: Debt-to-income ratio band; "Not applicable" and "Exempt" are kept as members.
+        data_type: varchar
+      - name: loan_amount
+        description: Loan amount in dollars, published as the midpoint of a $10,000 band.
+        data_type: double
+        constraints:
+          - type: not_null
+        data_tests:
+          - value_between:
+              arguments: {min_value: 0}
+      - name: property_value
+        description: Property value in dollars (banded like loan_amount); null when not reported or exempt.
+        data_type: double
+      - name: income_thousands
+        description: Gross annual income relied on, thousands of dollars. Can be negative. Null unless reported.
+        data_type: double
+      - name: income_status
+        description: reported, not_applicable, exempt or missing.
+        data_type: varchar
+      - name: interest_rate
+        description: Note rate, percent. Null unless reported.
+        data_type: double
+      - name: interest_rate_status
+        description: reported, not_applicable, exempt or missing.
+        data_type: varchar
+      - name: rate_spread
+        description: APR minus the average prime offer rate for a comparable transaction, percentage points.
+        data_type: double
+      - name: rate_spread_status
+        description: reported, not_applicable, exempt or missing.
+        data_type: varchar
+      - name: rate_spread_band
+        description: >
+          Rate spread bucket for originated loans (Below 0, 0 to <0.5, 0.5 to <1.0,
+          1.0 to <1.5, 1.5 to <3.0, 3.0 or more, Not reported); "Not originated" otherwise.
+        data_type: varchar
+        constraints:
+          - type: not_null
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ["Not originated", "Not reported", "Below 0", "0 to <0.5", "0.5 to <1.0", "1.0 to <1.5", "1.5 to <3.0", "3.0 or more"]
+      - name: loan_to_value_ratio
+        description: Combined loan-to-value ratio, percent, as reported.
+        data_type: double
+      - name: loan_term_months
+        description: Loan term in months.
+        data_type: double
+      - name: total_loan_costs
+        description: Total loan costs in dollars, where reported.
+        data_type: double
+      - name: loan_to_income_ratio
+        description: loan_amount divided by annual income in dollars; null unless income is reported and positive.
+        data_type: double
+      - name: rate_over_pmms_30y
+        description: >
+          Note rate minus the activity year's average Freddie Mac 30-year PMMS rate, for
+          originated first-lien 360-month closed-end loans. An annual benchmark, because
+          the public LAR has no dates.
+        data_type: double
+      - name: source_row_number
+        description: Position of the row in the raw file.
+        data_type: bigint
+        constraints:
+          - type: not_null
+      - name: _source_sha256
+        description: sha256 of the raw file this row was loaded from.
+        data_type: varchar
+        constraints:
+          - type: not_null
+      - name: _loaded_at
+        description: When the row was written. Audit only; excluded from idempotency checksums.
+        data_type: timestamp with time zone
+      - name: _dbt_invocation_id
+        description: dbt invocation that wrote the row. Audit only.
+        data_type: varchar
+
+  - name: fct_application_denial_reasons
+    description: >
+      Bridge fact: one row per stated denial reason per denied application (a denial
+      can cite up to four). Incremental, same partition overwrite as the main fact.
+    config:
+      contract:
+        enforced: true
+    columns:
+      - name: denial_reason_id
+        description: Surrogate key, md5 of (application_id, reason_position).
+        data_type: varchar
+        constraints:
+          - type: not_null
+        data_tests: [unique, not_null]
+      - name: application_id
+        description: Foreign key to fct_loan_applications.
+        data_type: varchar
+        constraints:
+          - type: not_null
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('fct_loan_applications')
+                field: application_id
+      - name: activity_year
+        description: Activity year. Partition column.
+        data_type: integer
+        constraints:
+          - type: not_null
+      - name: activity_year_start
+        description: January 1 of the activity year.
+        data_type: date
+        constraints:
+          - type: not_null
+      - name: state_code
+        description: Property state. Partition column.
+        data_type: varchar
+        constraints:
+          - type: not_null
+      - name: reason_position
+        description: 1-4, which denial_reason-N field the reason came from.
+        data_type: integer
+        constraints:
+          - type: not_null
+      - name: denial_reason_code
+        description: HMDA denial reason code, 1-9.
+        data_type: integer
+        constraints:
+          - type: not_null
+      - name: denial_reason
+        description: Label of the denial reason code.
+        data_type: varchar
+        constraints:
+          - type: not_null
+      - name: _source_sha256
+        description: sha256 of the raw file.
+        data_type: varchar
+      - name: _loaded_at
+        description: When the row was written. Audit only.
+        data_type: timestamp with time zone
+
+  - name: dim_lender
+    description: >
+      Type 2 lender dimension: one row per (lei, name as filed). A lender that filed
+      under a different name in a later year gets a new row; fact rows point at the
+      version filed for their own activity year.
+    config:
+      contract:
+        enforced: true
+    columns:
+      - name: lender_key
+        description: Surrogate key, md5 of (lei, lender_name).
+        data_type: varchar
+        constraints:
+          - type: not_null
+        data_tests: [unique, not_null]
+      - name: lei
+        description: Legal Entity Identifier, the durable natural key.
+        data_type: varchar
+        constraints:
+          - type: not_null
+      - name: lender_name
+        description: Institution name exactly as filed.
+        data_type: varchar
+        constraints:
+          - type: not_null
+      - name: lender_name_normalized
+        description: Upper-cased name, for grouping versions that differ only in capitalisation.
+        data_type: varchar
+      - name: is_in_filer_list
+        description: False for the placeholder version of a lei that has LAR rows but no filer record.
+        data_type: boolean
+      - name: valid_from_year
+        description: First activity year the lei filed under this name.
+        data_type: integer
+        constraints:
+          - type: not_null
+      - name: valid_to_year
+        description: Last loaded activity year the lei filed under this name.
+        data_type: integer
+        constraints:
+          - type: not_null
+      - name: years_reported
+        description: Number of loaded years with this name.
+        data_type: integer
+      - name: is_current
+        description: True for the version filed in the lei's most recent loaded year.
+        data_type: boolean
+        constraints:
+          - type: not_null
+      - name: version_number
+        description: 1 for the earliest version of a lei, increasing with valid_from_year.
+        data_type: integer
+
+  - name: dim_geography
+    description: County-grain geography (Census 2020), plus a "county not reported" member per state.
+    config:
+      contract:
+        enforced: true
+    columns:
+      - name: geography_key
+        description: Surrogate key, md5 of (state_code, county_fips or 'unknown').
+        data_type: varchar
+        constraints:
+          - type: not_null
+        data_tests: [unique, not_null]
+      - name: state_code
+        description: Two-letter state abbreviation.
+        data_type: varchar
+        constraints:
+          - type: not_null
+      - name: state_fips
+        description: Two-digit state FIPS code.
+        data_type: varchar
+      - name: county_fips
+        description: Five-digit county FIPS code; null for the "county not reported" member.
+        data_type: varchar
+      - name: county_name
+        description: County or equivalent name.
+        data_type: varchar
+        constraints:
+          - type: not_null
+      - name: is_county_reported
+        description: False for the "county not reported" member.
+        data_type: boolean
+
+  - name: dim_loan_product
+    description: >
+      Junk dimension of loan attributes: type, purpose, lien, occupancy, construction
+      method, conforming flag, open-end, reverse and business-purpose indicators.
+      The full cross product of the seeded domains.
+    config:
+      contract:
+        enforced: true
+    columns:
+      - name: loan_product_key
+        description: Surrogate key, md5 of the nine attribute codes.
+        data_type: varchar
+        constraints:
+          - type: not_null
+        data_tests: [unique, not_null]
+      - name: loan_type_code
+        description: HMDA loan type code.
+        data_type: integer
+      - name: loan_type
+        description: Conventional, FHA, VA, or USDA RHS or FSA.
+        data_type: varchar
+      - name: loan_purpose_code
+        description: HMDA loan purpose code.
+        data_type: integer
+      - name: loan_purpose
+        description: Home purchase, home improvement, refinancing, cash-out refinancing, other, not applicable.
+        data_type: varchar
+      - name: lien_status_code
+        description: HMDA lien status code.
+        data_type: integer
+      - name: lien_status
+        description: First lien or subordinate lien.
+        data_type: varchar
+      - name: occupancy_type_code
+        description: HMDA occupancy type code.
+        data_type: integer
+      - name: occupancy_type
+        description: Principal residence, second residence or investment property.
+        data_type: varchar
+      - name: construction_method_code
+        description: HMDA construction method code.
+        data_type: integer
+      - name: construction_method
+        description: Site-built or manufactured home.
+        data_type: varchar
+      - name: conforming_loan_limit_code
+        description: C, NC, U or NA as published.
+        data_type: varchar
+      - name: conforming_loan_limit
+        description: Conforming, nonconforming, undetermined or not applicable.
+        data_type: varchar
+      - name: open_end_line_of_credit_code
+        description: 1, 2 or 1111 (exempt).
+        data_type: integer
+      - name: open_end_line_of_credit
+        description: Whether the loan is an open-end line of credit.
+        data_type: varchar
+      - name: reverse_mortgage_code
+        description: 1, 2 or 1111 (exempt).
+        data_type: integer
+      - name: reverse_mortgage
+        description: Whether the loan is a reverse mortgage.
+        data_type: varchar
+      - name: business_or_commercial_purpose_code
+        description: 1, 2 or 1111 (exempt).
+        data_type: integer
+      - name: business_or_commercial_purpose
+        description: Whether the loan is primarily for a business or commercial purpose.
+        data_type: varchar
+
+  - name: dim_applicant_demographics
+    description: >
+      Junk dimension of the FFIEC-derived applicant attributes (ethnicity, race, sex,
+      age band). Collected under Regulation C for fair lending monitoring; see the
+      responsible-use note in the README.
+    config:
+      contract:
+        enforced: true
+    meta:
+      contains_demographic_data: true
+    columns:
+      - name: applicant_demographics_key
+        description: Surrogate key, md5 of the four attributes.
+        data_type: varchar
+        constraints:
+          - type: not_null
+        data_tests: [unique, not_null]
+      - name: derived_ethnicity
+        description: FFIEC-derived ethnicity of applicant and co-applicant combined.
+        data_type: varchar
+      - name: derived_race
+        description: FFIEC-derived race of applicant and co-applicant combined.
+        data_type: varchar
+      - name: derived_sex
+        description: FFIEC-derived sex of applicant and co-applicant combined.
+        data_type: varchar
+      - name: applicant_age_band
+        description: Applicant age band; "Not applicable" for non-natural-person applicants.
+        data_type: varchar
+      - name: applicant_age_band_sort
+        description: Display order of the age band.
+        data_type: integer
+
+  - name: dim_date
+    description: >
+      Year-grain date dimension from 2018 (first year of the current LAR format) to
+      the current year, with the Freddie Mac PMMS annual summary. Year is the only
+      time attribute in the public LAR.
+    config:
+      contract:
+        enforced: true
+    columns:
+      - name: date_key
+        description: The activity year as an integer.
+        data_type: integer
+        constraints:
+          - type: not_null
+        data_tests: [unique, not_null]
+      - name: activity_year
+        description: Calendar year.
+        data_type: integer
+      - name: year_start_date
+        description: January 1 of the year.
+        data_type: date
+      - name: year_end_date
+        description: December 31 of the year.
+        data_type: date
+      - name: pmms_survey_weeks
+        description: Weekly PMMS observations in the year (partial for the current year).
+        data_type: integer
+      - name: pmms_30y_avg
+        description: Mean weekly 30-year fixed PMMS rate, percent.
+        data_type: double
+      - name: pmms_30y_min
+        description: Lowest weekly 30-year fixed PMMS rate in the year.
+        data_type: double
+      - name: pmms_30y_max
+        description: Highest weekly 30-year fixed PMMS rate in the year.
+        data_type: double
+      - name: pmms_15y_avg
+        description: Mean weekly 15-year fixed PMMS rate, percent.
+        data_type: double
+
+unit_tests:
+  - name: lender_rename_creates_a_second_version
+    description: >
+      A lender that files under a new name gets a second dim row; the old row keeps
+      its year range and only the latest name is current.
+    model: dim_lender
+    given:
+      - input: ref('int_lender__names_by_year')
+        rows:
+          - {lei: A, activity_year: 2022, lender_name: "Old Name LLC", is_in_filer_list: true, lender_key: k_old}
+          - {lei: A, activity_year: 2023, lender_name: "New Name LLC", is_in_filer_list: true, lender_key: k_new}
+          - {lei: A, activity_year: 2024, lender_name: "New Name LLC", is_in_filer_list: true, lender_key: k_new}
+          - {lei: B, activity_year: 2023, lender_name: "Steady Bank", is_in_filer_list: true, lender_key: k_b}
+    expect:
+      rows:
+        - {lender_key: k_old, lei: A, lender_name: "Old Name LLC", valid_from_year: 2022, valid_to_year: 2022, is_current: false, version_number: 1}
+        - {lender_key: k_new, lei: A, lender_name: "New Name LLC", valid_from_year: 2023, valid_to_year: 2024, is_current: true, version_number: 2}
+        - {lender_key: k_b, lei: B, lender_name: "Steady Bank", valid_from_year: 2023, valid_to_year: 2023, is_current: true, version_number: 1}
