@@ -1,0 +1,120 @@
+# Airflow 3 for local verification of the DAG. Not a production deployment:
+# LocalExecutor, one small Postgres, no TLS, all users admin.
+#
+#   make airflow-up      build and start (UI on http://localhost:8793)
+#   make airflow-down    stop and delete volumes
+#
+# Memory limits: postgres 160 + api-server 512 + dag-processor 320 + scheduler 1000 = 1992 MiB.
+name: mmp-airflow
+
+x-airflow-common: &airflow-common
+  build:
+    context: ../..
+    dockerfile: docker/airflow/Dockerfile
+  image: mmp-airflow:3.4.0
+  environment: &airflow-env
+    AIRFLOW__CORE__EXECUTOR: LocalExecutor
+    # Two task processes at most: each one imports the DAG (Cosmos, pyarrow) and costs ~200 MiB.
+    AIRFLOW__CORE__PARALLELISM: "2"
+    AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+    AIRFLOW__CORE__DAGS_FOLDER: /opt/airflow/project/dags
+    AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: "true"
+    AIRFLOW__CORE__AUTH_MANAGER: airflow.api_fastapi.auth.managers.simple.simple_auth_manager.SimpleAuthManager
+    AIRFLOW__CORE__SIMPLE_AUTH_MANAGER_ALL_ADMINS: "true"
+    AIRFLOW__CORE__FERNET_KEY: ${AIRFLOW_FERNET_KEY:-}
+    AIRFLOW__CORE__EXECUTION_API_SERVER_URL: http://airflow-apiserver:8080/execution/
+    AIRFLOW__API_AUTH__JWT_SECRET: ${AIRFLOW_JWT_SECRET:-local-verification-only-not-a-secret}
+    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
+    AIRFLOW__SCHEDULER__DAG_DIR_LIST_INTERVAL: "30"
+    AIRFLOW__DAG_PROCESSOR__REFRESH_INTERVAL: "60"
+    AIRFLOW__API__WORKERS: "1"
+    MMP_SCOPE: ${MMP_SCOPE:-demo}
+    MMP_SOURCE_MODE: ${MMP_SOURCE_MODE:-http}
+    MMP_DUCKDB_MEMORY_LIMIT: 400MB
+    # dbt profile target with one dbt thread and capped DuckDB memory (dbt/profiles.yml)
+    DBT_TARGET: airflow
+    MMP_RETRY_DELAY_SECONDS: ${MMP_RETRY_DELAY_SECONDS:-120}
+    MMP_RUN_BUDGET_MINUTES: ${MMP_RUN_BUDGET_MINUTES:-90}
+  volumes:
+    - mmp-airflow-data:/opt/airflow/data
+    - mmp-airflow-logs:/opt/airflow/logs
+  user: "50000:0"
+  depends_on: &airflow-depends
+    postgres:
+      condition: service_healthy
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow
+      POSTGRES_DB: airflow
+    command: ["postgres", "-c", "shared_buffers=32MB", "-c", "max_connections=60"]
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "airflow"]
+      interval: 5s
+      retries: 10
+    mem_limit: 160m
+    volumes:
+      - mmp-airflow-pg:/var/lib/postgresql/data
+
+  airflow-init:
+    <<: *airflow-common
+    entrypoint: /bin/bash
+    command:
+      - -c
+      - |
+        set -e
+        mkdir -p /opt/airflow/data /opt/airflow/logs
+        airflow db migrate
+        airflow pools set hmda_api 2 "Concurrent requests to the public HMDA API"
+        airflow pools set duckdb_writer 1 "DuckDB allows a single writer"
+    user: "0:0"
+    environment:
+      <<: *airflow-env
+      _AIRFLOW_DB_MIGRATE: "false"
+    mem_limit: 640m
+    restart: "no"
+
+  airflow-apiserver:
+    <<: *airflow-common
+    command: api-server
+    ports:
+      - "127.0.0.1:8793:8080"
+    mem_limit: 512m
+    depends_on:
+      <<: *airflow-depends
+      airflow-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8080/api/v2/version"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 40s
+
+  airflow-dag-processor:
+    <<: *airflow-common
+    command: dag-processor
+    mem_limit: 320m
+    depends_on:
+      <<: *airflow-depends
+      airflow-init:
+        condition: service_completed_successfully
+
+  airflow-scheduler:
+    <<: *airflow-common
+    command: scheduler
+    mem_limit: 1000m
+    depends_on:
+      <<: *airflow-depends
+      airflow-init:
+        condition: service_completed_successfully
+      airflow-apiserver:
+        condition: service_healthy
+
+volumes:
+  mmp-airflow-data:
+  mmp-airflow-logs:
+  mmp-airflow-pg:
