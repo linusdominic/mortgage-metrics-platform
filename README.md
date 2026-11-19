@@ -55,6 +55,14 @@ individuals or join it to anything that could re-identify them.
 
 ## Architecture
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/img/architecture-dark.svg">
+  <img alt="Architecture: public HMDA, PMMS and Census files are landed with manifests and converted to Parquet, built by dbt into DuckDB staging (rejects go to quarantine) and star-schema marts, checked by a quality gate, then served through a MetricFlow semantic layer to an MCP server with governed tools only." src="docs/img/architecture-light.svg">
+</picture>
+
+<details>
+<summary>The same diagram as text, with more detail</summary>
+
 ```mermaid
 flowchart LR
     subgraph sources[Public sources]
@@ -99,6 +107,8 @@ flowchart LR
     AF -.-> wh
     AF -.-> serve
 ```
+
+</details>
 
 The same step functions are run by `make pipeline` and by the Airflow DAG.
 
@@ -417,6 +427,11 @@ has the question as a person would ask it, the `query_metric` call a correct
 agent should arrive at, and reference SQL written directly against the marts
 that does not use the semantic layer or its `is_*` flags.
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/img/evals-dark.svg">
+  <img alt="Evals on 32 golden questions: deterministic evals 32 of 32 passed; in one LLM run with claude-sonnet-5-5, tool selection 31 of 32, result rows 30 of 32, and answers 22 of 22 graded questions right." src="docs/img/evals-light.svg">
+</picture>
+
 **Layer 1, deterministic. Runs in CI, no API key.** Execute the expected call
 through the same toolbox the MCP server uses, run the reference SQL, require
 agreement to 1e-9.
@@ -585,6 +600,11 @@ The six runs of this build, in order (first build, no-op rerun, backfill of
 | 20261116T203551Z-df5304 | full_refresh |       0.08 |                0 |      0.01 |       5.79 |        2.55 |       2.50 |           359,040 |         12,199,417 |             23,068,672 |
 | 20261116T203603Z-a60558 | incremental  |       0.03 |                0 |      0.00 |       5.26 |        1.92 |       2.53 |                 0 |                  0 |                      0 |
 ```
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/img/incremental-vs-full-dark.svg">
+  <img alt="Fact table work as a share of a full refresh: full refresh 100.00% of bytes scanned and 100.00% of fact model time; backfill of one year 40.60% of bytes and 79.00% of time; no-op incremental run 0.00% of bytes and 11.40% of time." src="docs/img/incremental-vs-full-light.svg">
+</picture>
 
 Incremental against full refresh, for the fact table:
 
