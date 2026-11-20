@@ -247,6 +247,10 @@ make test lint        # pytest, ruff, sqlfluff
 open data/published/report/index.html
 ```
 
+`make pipeline` writes the report to `data/published/report`, which is git-ignored.
+`make report` writes it to `docs/report` instead, overwriting the committed copy shown
+under [What you get](#what-you-get).
+
 Other scopes are in [config/pipeline.yml](config/pipeline.yml). `MMP_SCOPE=full`
 lists every state for three years; it has not been run as part of this build.
 
@@ -659,6 +663,10 @@ make test-dags     # 8 DAG integrity tests: import, cycles, schedule, default ar
 make airflow-up    # Postgres + API server + DAG processor + scheduler; memory limits total 1992 MiB
 make airflow-down
 ```
+
+`make test-dags` installs the `airflow` dependency group (Apache Airflow and
+astronomer-cosmos) into the project's `.venv` before it runs, a large download the
+first time. It stays there until the next `make setup` (`uv sync`) removes it.
 
 ### What was verified in Docker
 
